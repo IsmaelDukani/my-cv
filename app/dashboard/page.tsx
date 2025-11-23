@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, FileText, Trash2, Loader2, LogOut } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { useUser, useClerk } from '@clerk/nextjs';
 import { CVService, SavedCV } from '../../services/CVService';
 import { useTheme } from '../../components/ThemeContext';
 import { ThemeLanguageControls } from '../../components/ThemeLanguageControls';
@@ -11,27 +11,25 @@ import { ThemeLanguageControls } from '../../components/ThemeLanguageControls';
 export default function Dashboard() {
     const router = useRouter();
     const { t } = useTheme();
+    const { user, isLoaded, isSignedIn } = useUser();
+    const { signOut } = useClerk();
     const [loading, setLoading] = useState(true);
     const [cvs, setCvs] = useState<SavedCV[]>([]);
-    const [user, setUser] = useState<any>(null);
 
     useEffect(() => {
-        checkUser();
-    }, []);
-
-    const checkUser = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            router.push('/');
-            return;
+        if (isLoaded) {
+            if (!isSignedIn) {
+                router.push('/');
+            } else {
+                fetchCVs();
+            }
         }
-        setUser(user);
-        fetchCVs();
-    };
+    }, [isLoaded, isSignedIn]);
 
     const fetchCVs = async () => {
+        if (!user) return;
         setLoading(true);
-        const { cvs, error } = await CVService.listCVs();
+        const { cvs, error } = await CVService.listCVs(user.id);
         if (error) {
             console.error('Error fetching CVs:', error);
         } else {
@@ -49,7 +47,7 @@ export default function Dashboard() {
     };
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut();
+        await signOut();
         router.push('/');
     };
 
@@ -74,7 +72,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-4">
                         <ThemeLanguageControls />
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-slate-600 dark:text-slate-400 hidden md:block">{user?.email}</span>
+                            <span className="text-sm text-slate-600 dark:text-slate-400 hidden md:block">{user?.primaryEmailAddress?.emailAddress}</span>
                             <button
                                 onClick={handleSignOut}
                                 className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"

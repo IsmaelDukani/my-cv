@@ -1,149 +1,69 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import { HomePage } from '../components/HomePage';
-import { AuthModal } from '../components/AuthModal';
 import { OnboardingFlow, CVData } from '../components/OnboardingFlow';
-import { EditorPage } from '../components/EditorPage';
-import { AccountPage } from '../components/AccountPage';
-import { LocalAuthService } from '../services/LocalAuthService';
-import { projectId, publicAnonKey } from '../components/info';
-import { ThemeProvider } from '../components/ThemeContext';
-import { supabase } from '../lib/supabase';
-
-type AppState = 'home' | 'onboarding' | 'editor' | 'account';
+import { Loader2 } from 'lucide-react';
 
 export default function Page() {
   const router = useRouter();
-  const [state, setState] = useState<AppState>('home');
-  const [showAuth, setShowAuth] = useState(false);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
-  const [cvData, setCvData] = useState<CVData | null>(null);
-  const [loadingCvId, setLoadingCvId] = useState<string | null>(null);
+  const { user, isLoaded, isSignedIn } = useUser();
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
-
-  // Check for existing session on mount
   useEffect(() => {
-    checkSession();
-  }, []);
-
-  const checkSession = async () => {
-    // Check Supabase session
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      router.push('/dashboard');
-      return;
+    if (isLoaded && isSignedIn) {
+      // Check if user has any CVs or needs onboarding
+      // For now, we can just let them go to dashboard or stay on home
+      // If they clicked "Create CV", they might want to go to onboarding
     }
-
-    // Fallback to local session (legacy)
-    const user = await LocalAuthService.getSession();
-    if (user) {
-      setAccessToken('local-token');
-      setUser(user);
-    }
-  };
+  }, [isLoaded, isSignedIn]);
 
   const handleGetStarted = (mode: 'signin' | 'signup' = 'signup') => {
-    if (accessToken && user) {
-      setState('onboarding');
+    // Clerk handles the modal via the buttons in HomePage
+    // If we are here, it means the user is not signed in and clicked a button that wasn't a Clerk button
+    // But we replaced those buttons.
+    // However, if they are signed in, we might want to show onboarding.
+    if (isSignedIn) {
+      setShowOnboarding(true);
     } else {
-      setAuthMode(mode);
-      setShowAuth(true);
+      // Redirect to sign in page or open modal (handled by Clerk components usually)
+      // But since we use mode="modal" in HomePage, this might not be needed.
+      // Let's just redirect to dashboard if they are signed in.
+      router.push('/dashboard');
     }
-  };
-
-  const handleAuthSuccess = (token: string, userData: any) => {
-    setAccessToken(token);
-    setUser(userData);
-    setState('onboarding');
   };
 
   const handleOnboardingComplete = (data: CVData) => {
-    setCvData(data);
-    setState('editor');
+    // Save data to local storage or pass to editor?
+    // Actually, usually we want to go to the editor with this data.
+    // We can encode it in URL or save to a temporary draft.
+    // For simplicity, let's just redirect to editor with a "new" flag or similar.
+    // Or better, create the CV immediately.
+
+    // Since we don't have the CVService here easily without async, 
+    // let's just redirect to /editor which handles new CV creation.
+    router.push('/editor');
   };
 
-  const handleSignOut = async () => {
-    await LocalAuthService.signOut();
-    setAccessToken(null);
-    setUser(null);
-    setCvData(null);
-    setState('home');
-  };
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
 
-  const handleViewAccount = () => {
-    setState('account');
-  };
-
-  const handleBackToEditor = () => {
-    setState('editor');
-  };
-
-  const handleCreateNewCV = () => {
-    setCvData(null);
-    setLoadingCvId(null);
-    setState('onboarding');
-  };
-
-  const handleLoadCV = async (cvId: string) => {
-    setLoadingCvId(cvId);
-
-    try {
-      const { cv, error } = await LocalAuthService.getCV(cvId);
-
-      if (error) throw new Error(error);
-
-      if (cv) {
-        setCvData(cv.data);
-        setState('editor');
-      }
-    } catch (err: any) {
-      console.error('Load CV error:', err);
-      alert('Failed to load CV: ' + (err.message || 'Unknown error'));
-    } finally {
-      setLoadingCvId(null);
-    }
-  };
+  if (showOnboarding) {
+    return (
+      <OnboardingFlow
+        onComplete={handleOnboardingComplete}
+        onBack={() => setShowOnboarding(false)}
+      />
+    );
+  }
 
   return (
-    <>
-      {state === 'home' && <HomePage onGetStarted={handleGetStarted} />}
-
-      {state === 'onboarding' && (
-        <OnboardingFlow
-          onComplete={handleOnboardingComplete}
-          onBack={() => setState('home')}
-        />
-      )}
-
-      {state === 'editor' && cvData && accessToken && user && (
-        <EditorPage
-          initialData={cvData}
-          accessToken={accessToken}
-          user={user}
-          onSignOut={handleSignOut}
-          onViewAccount={handleViewAccount}
-        />
-      )}
-
-      {state === 'account' && accessToken && user && (
-        <AccountPage
-          accessToken={accessToken}
-          user={user}
-          onBack={handleBackToEditor}
-          onLoadCV={handleLoadCV}
-          onCreateNew={handleCreateNewCV}
-        />
-      )}
-
-      <AuthModal
-        isOpen={showAuth}
-        onClose={() => setShowAuth(false)}
-        onSuccess={handleAuthSuccess}
-        initialMode={authMode}
-      />
-    </>
+    <HomePage onGetStarted={handleGetStarted} />
   );
 }

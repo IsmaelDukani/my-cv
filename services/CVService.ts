@@ -12,15 +12,14 @@ export interface SavedCV {
 }
 
 export const CVService = {
-    listCVs: async (): Promise<{ cvs: SavedCV[]; error: string | null }> => {
+    listCVs: async (userId: string): Promise<{ cvs: SavedCV[]; error: string | null }> => {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('User not authenticated');
+            if (!userId) throw new Error('User not authenticated');
 
             const { data, error } = await supabase
                 .from('cvs')
                 .select('*')
-                .eq('user_id', user.id)
+                .eq('user_id', userId)
                 .order('updated_at', { ascending: false });
 
             if (error) throw error;
@@ -31,13 +30,12 @@ export const CVService = {
         }
     },
 
-    saveCV: async (cvId: string | null, title: string, template: string, data: CVData): Promise<{ id: string; error: string | null }> => {
+    saveCV: async (userId: string, cvId: string | null, title: string, template: string, data: CVData): Promise<{ id: string; error: string | null }> => {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('User not authenticated');
+            if (!userId) throw new Error('User not authenticated');
 
             const cvData = {
-                user_id: user.id,
+                user_id: userId,
                 title,
                 template,
                 data,

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useUser, useClerk } from '@clerk/nextjs';
 import { supabase } from '../../lib/supabase';
 import { CVService } from '../../services/CVService';
 import { EditorPage as EditorComponent } from '../../components/EditorPage';
@@ -12,31 +13,32 @@ function EditorContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const cvId = searchParams.get('id');
+    const { user, isLoaded, isSignedIn } = useUser();
+    const { signOut } = useClerk();
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<any>(null);
     const [initialData, setInitialData] = useState<CVData | null>(null);
 
     useEffect(() => {
-        checkUser();
-    }, []);
+        if (isLoaded) {
+            if (!isSignedIn) {
+                router.push('/');
+            } else {
+                checkUser();
+            }
+        }
+    }, [isLoaded, isSignedIn]);
 
     const checkUser = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            router.push('/');
-            return;
-        }
-        setUser(user);
+        if (!user) return;
 
         if (cvId) {
-            loadCV(cvId);
+            loadCV(cvId, user.id);
         } else {
-            // Initialize with empty data or redirect to onboarding
-            // For now, let's initialize with empty data
+            // Initialize with empty data
             setInitialData({
                 personalInfo: {
-                    name: user.user_metadata?.full_name || '',
-                    email: user.email || '',
+                    name: user.fullName || '',
+                    email: user.primaryEmailAddress?.emailAddress || '',
                     phone: '',
                     location: '',
                     title: '',
@@ -52,7 +54,7 @@ function EditorContent() {
         }
     };
 
-    const loadCV = async (id: string) => {
+    const loadCV = async (id: string, userId: string) => {
         const { cv, error } = await CVService.getCV(id);
         if (error || !cv) {
             console.error('Error loading CV:', error);
@@ -65,11 +67,11 @@ function EditorContent() {
     };
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut();
+        await signOut();
         router.push('/');
     };
 
-    if (loading || !initialData) {
+    if (loading || !initialData || !user) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
                 <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
@@ -80,7 +82,7 @@ function EditorContent() {
     return (
         <EditorComponent
             initialData={initialData}
-            accessToken="supabase-token" // Placeholder, not used by CVService
+            accessToken="clerk-token" // Placeholder
             user={user}
             onSignOut={handleSignOut}
             onViewAccount={() => router.push('/dashboard')}

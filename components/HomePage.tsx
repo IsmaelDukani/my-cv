@@ -2,6 +2,8 @@ import React from 'react';
 import { Sparkles, FileText, Download, Palette } from 'lucide-react';
 import { useTheme } from '../components/ThemeContext';
 import { ThemeLanguageControls } from '../components/ThemeLanguageControls';
+import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
+import Link from 'next/link';
 
 interface HomePageProps {
   onGetStarted: (mode?: 'signin' | 'signup') => void;
@@ -22,18 +24,26 @@ export function HomePage({ onGetStarted }: HomePageProps) {
 
           <div className="flex items-center gap-6">
             <ThemeLanguageControls />
-            <button
-              onClick={() => onGetStarted('signin')}
-              className="text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors"
-            >
-              {t('logInBtn')}
-            </button>
-            <button
-              onClick={() => onGetStarted('signup')}
-              className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-lg shadow-indigo-200 dark:shadow-none"
-            >
-              {t('createCVBtn')}
-            </button>
+
+            <SignedOut>
+              <SignInButton mode="modal">
+                <button className="text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors">
+                  {t('logInBtn')}
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-lg shadow-indigo-200 dark:shadow-none">
+                  {t('createCVBtn')}
+                </button>
+              </SignUpButton>
+            </SignedOut>
+
+            <SignedIn>
+              <Link href="/dashboard" className="text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors">
+                Dashboard
+              </Link>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
           </div>
         </div>
       </nav>

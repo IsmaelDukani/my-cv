@@ -34,6 +34,7 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
 
     try {
       const { id, error } = await CVService.saveCV(
+        user.id,
         cvId,
         cvTitle,
         template,
