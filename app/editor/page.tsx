@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { CVService } from '../../services/CVService';
@@ -8,7 +8,7 @@ import { EditorPage as EditorComponent } from '../../components/EditorPage';
 import { CVData } from '../../components/OnboardingFlow';
 import { Loader2 } from 'lucide-react';
 
-export default function EditorPage() {
+function EditorContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const cvId = searchParams.get('id');
@@ -85,5 +85,17 @@ export default function EditorPage() {
             onSignOut={handleSignOut}
             onViewAccount={() => router.push('/dashboard')}
         />
+    );
+}
+
+export default function EditorPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+                <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+            </div>
+        }>
+            <EditorContent />
+        </Suspense>
     );
 }
