@@ -1,12 +1,21 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, FileText, Trash2, Loader2, LogOut } from 'lucide-react';
+import { Plus, FileText, Trash2, Loader2, LogOut, User, FolderOpen } from 'lucide-react';
 import { useUser, useClerk } from '@clerk/nextjs';
 import { CVService, SavedCV } from '../../services/CVService';
 import { useTheme } from '../../components/ThemeContext';
 import { ThemeLanguageControls } from '../../components/ThemeLanguageControls';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
 
 export default function Dashboard() {
     const router = useRouter();
@@ -62,26 +71,43 @@ export default function Dashboard() {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
             {/* Header */}
-            <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4">
-                <div className="max-w-7xl mx-auto flex items-center justify-between">
+            {/* Header */}
+            <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                        <FileText className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-                        <h1 className="text-xl font-bold text-slate-800 dark:text-white">CV Maker Dashboard</h1>
+                        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                            <span className="text-lg font-bold text-slate-800 dark:text-slate-100">{t('appTitle')}</span>
+                        </Link>
                     </div>
+                </div>
 
-                    <div className="flex items-center gap-4">
-                        <ThemeLanguageControls />
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-slate-600 dark:text-slate-400 hidden md:block">{user?.primaryEmailAddress?.emailAddress}</span>
-                            <button
-                                onClick={handleSignOut}
-                                className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                                title={t('signOut')}
-                            >
-                                <LogOut className="w-5 h-5" />
+                <div className="flex items-center gap-3">
+                    <ThemeLanguageControls />
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className="p-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
+                                <User className="w-5 h-5" />
                             </button>
-                        </div>
-                    </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>{t('myAccount') || 'My Account'}</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => router.push('/dashboard')}>
+                                <FolderOpen className="w-4 h-4 mr-2" />
+                                {t('dashboard') || 'Dashboard'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { /* TODO: Account modal */ }}>
+                                <User className="w-4 h-4 mr-2" />
+                                {t('account') || 'Account'}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={handleSignOut} className="text-red-600 dark:text-red-400">
+                                <LogOut className="w-4 h-4 mr-2" />
+                                {t('signOut')}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </header>
 
