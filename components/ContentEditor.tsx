@@ -98,6 +98,37 @@ export function ContentEditor({ data, onChange, accessToken }: ContentEditorProp
     onChange({ ...data, experiences: newExperiences });
   };
 
+  const addEducation = () => {
+    onChange({
+      ...data,
+      education: [...(data.education || []), {
+        id: crypto.randomUUID(),
+        institution: '',
+        degree: '',
+        field: '',
+        startDate: '',
+        endDate: '',
+        gpa: ''
+      }]
+    });
+  };
+
+  const removeEducation = (id: string) => {
+    onChange({
+      ...data,
+      education: data.education.filter(e => e.id !== id)
+    });
+  };
+
+  const updateEducation = (id: string, field: string, value: string) => {
+    onChange({
+      ...data,
+      education: data.education.map(e =>
+        e.id === id ? { ...e, [field]: value } : e
+      )
+    });
+  };
+
   const aiRewrite = async (expId: string) => {
     const exp = data.experiences.find(e => e.id === expId);
     if (!exp || exp.bullets.filter(b => b.trim()).length === 0) {
@@ -290,21 +321,66 @@ export function ContentEditor({ data, onChange, accessToken }: ContentEditorProp
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
+
               <div className="grid md:grid-cols-2 gap-3 mb-4">
                 <input
                   type="text"
                   placeholder={t('company')}
                   value={exp.company}
                   onChange={(e) => updateExperience(exp.id, 'company', e.target.value)}
-                  className={`px-3 py-2 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 ${theme === 'dark-glass' ? 'glass-input' : ''}`}
+                  className={`w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 ${theme === 'dark-glass' ? 'glass-input' : ''}`}
                 />
                 <input
                   type="text"
                   placeholder={t('jobTitle')}
                   value={exp.position}
                   onChange={(e) => updateExperience(exp.id, 'position', e.target.value)}
-                  className={`px-3 py-2 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 ${theme === 'dark-glass' ? 'glass-input' : ''}`}
+                  className={`w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 ${theme === 'dark-glass' ? 'glass-input' : ''}`}
                 />
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-3 mb-4">
+                <input
+                  type="text"
+                  placeholder={t('location')}
+                  value={exp.location}
+                  onChange={(e) => updateExperience(exp.id, 'location', e.target.value)}
+                  className={`w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 ${theme === 'dark-glass' ? 'glass-input' : ''}`}
+                />
+                <input
+                  type="month"
+                  placeholder={t('startDate')}
+                  value={exp.startDate}
+                  onChange={(e) => updateExperience(exp.id, 'startDate', e.target.value)}
+                  className={`w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 ${theme === 'dark-glass' ? 'glass-input' : ''}`}
+                />
+                <div>
+                  <input
+                    type="month"
+                    placeholder={t('endDate')}
+                    value={exp.endDate}
+                    onChange={(e) => updateExperience(exp.id, 'endDate', e.target.value)}
+                    disabled={exp.current}
+                    className={`w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 ${theme === 'dark-glass' ? 'glass-input' : ''} ${exp.current ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  />
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="checkbox"
+                      id={`current-${exp.id}`}
+                      checked={exp.current}
+                      onChange={(e) => {
+                        updateExperience(exp.id, 'current', e.target.checked);
+                        if (e.target.checked) {
+                          updateExperience(exp.id, 'endDate', 'Present');
+                        }
+                      }}
+                      className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                    />
+                    <label htmlFor={`current-${exp.id}`} className="text-sm text-slate-700 dark:text-slate-300">
+                      {t('currentRole')}
+                    </label>
+                  </div>
+                </div>
               </div>
 
               <div className="mb-4">
@@ -361,6 +437,101 @@ export function ContentEditor({ data, onChange, accessToken }: ContentEditorProp
           >
             <Plus className="w-4 h-4" />
             {t('addExperience')}
+          </button>
+        </div>
+      </div>
+
+
+
+      {/* Education */}
+      <div className={`bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 ${theme === 'dark-glass' ? 'glass-card' : ''}`}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl text-slate-800 dark:text-slate-100">{t('education')}</h3>
+        </div>
+
+        <div className="space-y-6">
+          {(data.education || []).map((edu, index) => (
+            <div key={edu.id} className="p-4 border-2 border-slate-200 dark:border-slate-700 rounded-lg relative group">
+              <div className="absolute right-4 top-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => removeEducation(edu.id)}
+                  className="p-1 text-slate-400 hover:text-red-600"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm mb-2 text-slate-700 dark:text-slate-300">{t('institution')}</label>
+                <input
+                  type="text"
+                  value={edu.institution}
+                  onChange={(e) => updateEducation(edu.id, 'institution', e.target.value)}
+                  className={`w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 ${theme === 'dark-glass' ? 'glass-input' : ''}`}
+                />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="block text-sm mb-2 text-slate-700 dark:text-slate-300">{t('degree')}</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Bachelor of Science"
+                    value={edu.degree}
+                    onChange={(e) => updateEducation(edu.id, 'degree', e.target.value)}
+                    className={`w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 ${theme === 'dark-glass' ? 'glass-input' : ''}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-2 text-slate-700 dark:text-slate-300">{t('degree')}</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Computer Science"
+                    value={edu.field}
+                    onChange={(e) => updateEducation(edu.id, 'field', e.target.value)}
+                    className={`w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 ${theme === 'dark-glass' ? 'glass-input' : ''}`}
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-3 mb-4">
+                <div>
+                  <label className="block text-sm mb-2 text-slate-700 dark:text-slate-300">{t('startDate')}</label>
+                  <input
+                    type="month"
+                    value={edu.startDate}
+                    onChange={(e) => updateEducation(edu.id, 'startDate', e.target.value)}
+                    className={`w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 ${theme === 'dark-glass' ? 'glass-input' : ''}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-2 text-slate-700 dark:text-slate-300">{t('endDate')}</label>
+                  <input
+                    type="month"
+                    value={edu.endDate}
+                    onChange={(e) => updateEducation(edu.id, 'endDate', e.target.value)}
+                    className={`w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 ${theme === 'dark-glass' ? 'glass-input' : ''}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-2 text-slate-700 dark:text-slate-300">GPA</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 3.8/4.0"
+                    value={edu.gpa}
+                    onChange={(e) => updateEducation(edu.id, 'gpa', e.target.value)}
+                    className={`w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 ${theme === 'dark-glass' ? 'glass-input' : ''}`}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+          <button
+            onClick={addEducation}
+            className="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-500 hover:border-indigo-500 hover:text-indigo-600 transition-colors flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            {t('addEducation')}
           </button>
         </div>
       </div>
