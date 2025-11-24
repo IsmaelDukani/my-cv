@@ -30,7 +30,7 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
   const { t, theme } = useTheme();
   const [data, setData] = useState<CVData>(initialData);
   const [template, setTemplate] = useState<Template>('modern');
-  const [activeTab, setActiveTab] = useState<'content' | 'template'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'template' | 'preview'>('content');
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [cvId, setCvId] = useState<string | null>(null);
@@ -172,10 +172,10 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto p-6">
             {/* Tabs */}
-            <div className="flex gap-2 mb-6 bg-white dark:bg-slate-800 rounded-lg p-1 border border-slate-200 dark:border-slate-700 inline-flex">
+            <div className="flex gap-2 mb-6 bg-white dark:bg-slate-800 rounded-lg p-1 border border-slate-200 dark:border-slate-700 inline-flex overflow-x-auto max-w-full">
               <button
                 onClick={() => setActiveTab('content')}
-                className={`px-4 py-2 rounded-md flex items-center gap-2 transition-colors ${activeTab === 'content'
+                className={`px-4 py-2 rounded-md flex items-center gap-2 transition-colors whitespace-nowrap ${activeTab === 'content'
                   ? 'bg-indigo-600 dark:bg-indigo-500 text-white'
                   : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
                   }`}
@@ -185,7 +185,7 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
               </button>
               <button
                 onClick={() => setActiveTab('template')}
-                className={`px-4 py-2 rounded-md flex items-center gap-2 transition-colors ${activeTab === 'template'
+                className={`px-4 py-2 rounded-md flex items-center gap-2 transition-colors whitespace-nowrap ${activeTab === 'template'
                   ? 'bg-indigo-600 dark:bg-indigo-500 text-white'
                   : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
                   }`}
@@ -193,16 +193,28 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
                 <Palette className="w-4 h-4" />
                 {t('template')}
               </button>
+              <button
+                onClick={() => setActiveTab('preview')}
+                className={`px-4 py-2 rounded-md flex items-center gap-2 transition-colors lg:hidden whitespace-nowrap ${activeTab === 'preview'
+                  ? 'bg-indigo-600 dark:bg-indigo-500 text-white'
+                  : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+              >
+                <Eye className="w-4 h-4" />
+                {t('livePreview')}
+              </button>
             </div>
 
             {/* Content Area */}
-            {activeTab === 'content' ? (
+            {activeTab === 'content' && (
               <ContentEditor
                 data={data}
                 onChange={setData}
                 accessToken={accessToken}
               />
-            ) : (
+            )}
+
+            {activeTab === 'template' && (
               <div className="bg-white dark:bg-slate-800 rounded-xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
                 <h2 className="text-2xl mb-2 text-slate-800 dark:text-slate-100">{t('chooseTemplate')}</h2>
                 <p className="text-slate-600 dark:text-slate-300 mb-6">
@@ -211,11 +223,22 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
                 <TemplateSelector selected={template} onSelect={setTemplate} />
               </div>
             )}
+
+            {/* Mobile Preview Area */}
+            {activeTab === 'preview' && (
+              <div className="lg:hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden p-4">
+                <div className="flex justify-center">
+                  <div className="transform scale-[0.6] sm:scale-75 origin-top">
+                    <LivePreview data={data} template={template} />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Panel - Preview */}
-        <div className="w-[650px] bg-slate-100 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 overflow-y-auto p-6">
+        {/* Right Panel - Preview (Desktop Only) */}
+        <div className="hidden lg:block w-[650px] bg-slate-100 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 overflow-y-auto p-6">
           <div className="flex items-center gap-2 mb-4 text-slate-600 dark:text-slate-400">
             <Eye className="w-4 h-4" />
             <span className="text-sm">{t('livePreview')}</span>

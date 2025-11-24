@@ -49,7 +49,7 @@ export function HomePage({ onGetStarted }: HomePageProps) {
       </nav>
 
       {/* Hero Section */}
-      <header className="bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white py-32 relative overflow-hidden">
+      <header className="bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white py-16 md:py-32 relative overflow-hidden">
         {/* Background Glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none" />
 
@@ -58,7 +58,7 @@ export function HomePage({ onGetStarted }: HomePageProps) {
             {t('appTitle')}
           </div>
 
-          <h1 className="text-6xl font-bold mb-8 leading-tight">
+          <h1 className="text-4xl md:text-6xl font-bold mb-8 leading-tight">
             {t('bestFree')} <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
               {t('aiCVBuilderTitle')}
@@ -79,7 +79,7 @@ export function HomePage({ onGetStarted }: HomePageProps) {
       </header>
 
       {/* How It Works Section */}
-      <main className="py-32 bg-white dark:bg-slate-900">
+      <main className="py-16 md:py-32 bg-white dark:bg-slate-900">
         <div className="max-w-7xl mx-auto px-6">
           {/* Section Header */}
           <div className="text-center mb-32">
