@@ -122,7 +122,6 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
             className="px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg flex items-center gap-2"
           >
             <FolderOpen className="w-4 h-4" />
-            <FolderOpen className="w-4 h-4" />
             <span className="hidden lg:inline">{t('myCVs')}</span>
           </button>
 
@@ -132,7 +131,6 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
             className="px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 flex items-center gap-2 disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
-            <Save className="w-4 h-4" />
             <span className="hidden lg:inline">{saving ? t('saving') : t('save')}</span>
           </button>
 
@@ -140,7 +138,6 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
             onClick={handleExport}
             className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 flex items-center gap-2"
           >
-            <Download className="w-4 h-4" />
             <Download className="w-4 h-4" />
             <span className="hidden lg:inline">{t('export')}</span>
           </button>
