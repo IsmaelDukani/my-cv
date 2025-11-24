@@ -6,7 +6,7 @@ import { useUser, useClerk } from '@clerk/nextjs';
 import { supabase } from '../../lib/supabase';
 import { CVService } from '../../services/CVService';
 import { EditorPage as EditorComponent } from '../../components/EditorPage';
-import { CVData } from '../../components/OnboardingFlow';
+import { OnboardingFlow, CVData } from '../../components/OnboardingFlow';
 import { Loader2 } from 'lucide-react';
 
 function EditorContent() {
@@ -17,6 +17,7 @@ function EditorContent() {
     const { signOut } = useClerk();
     const [loading, setLoading] = useState(true);
     const [initialData, setInitialData] = useState<CVData | null>(null);
+    const [showOnboarding, setShowOnboarding] = useState(false);
 
     useEffect(() => {
         if (isLoaded) {
@@ -34,22 +35,8 @@ function EditorContent() {
         if (cvId) {
             loadCV(cvId, user.id);
         } else {
-            // Initialize with empty data
-            setInitialData({
-                personalInfo: {
-                    name: user.fullName || '',
-                    email: user.primaryEmailAddress?.emailAddress || '',
-                    phone: '',
-                    location: '',
-                    title: '',
-                    summary: '',
-                    linkedin: '',
-                    github: ''
-                },
-                experiences: [],
-                education: [],
-                skills: []
-            });
+            // No ID means new CV - show onboarding
+            setShowOnboarding(true);
             setLoading(false);
         }
     };
@@ -71,13 +58,29 @@ function EditorContent() {
         router.push('/');
     };
 
-    if (loading || !initialData || !user) {
+    const handleOnboardingComplete = (data: CVData) => {
+        setInitialData(data);
+        setShowOnboarding(false);
+    };
+
+    if (loading || !user) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
                 <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
             </div>
         );
     }
+
+    if (showOnboarding) {
+        return (
+            <OnboardingFlow
+                onComplete={handleOnboardingComplete}
+                onBack={() => router.push('/dashboard')}
+            />
+        );
+    }
+
+    if (!initialData) return null;
 
     return (
         <EditorComponent
