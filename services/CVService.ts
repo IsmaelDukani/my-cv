@@ -26,7 +26,14 @@ export const CVService = {
 
             return { cvs: data as SavedCV[], error: null };
         } catch (err: any) {
-            return { cvs: [], error: err.message };
+            console.warn('Supabase list failed, falling back to local storage:', err);
+            try {
+                const localCVs = JSON.parse(localStorage.getItem('cv_maker_local_cvs') || '[]');
+                const userCVs = localCVs.filter((cv: SavedCV) => cv.user_id === userId);
+                return { cvs: userCVs, error: null };
+            } catch (localErr) {
+                return { cvs: [], error: err.message };
+            }
         }
     },
 
@@ -62,7 +69,34 @@ export const CVService = {
 
             return { id: result.data.id, error: null };
         } catch (err: any) {
-            return { id: '', error: err.message };
+            console.warn('Supabase save failed, falling back to local storage:', err);
+            try {
+                const localCVs = JSON.parse(localStorage.getItem('cv_maker_local_cvs') || '[]');
+                const newId = cvId || crypto.randomUUID();
+                const now = new Date().toISOString();
+
+                const newCV = {
+                    id: newId,
+                    user_id: userId,
+                    title,
+                    template,
+                    data,
+                    created_at: cvId ? (localCVs.find((c: any) => c.id === cvId)?.created_at || now) : now,
+                    updated_at: now
+                };
+
+                const existingIndex = localCVs.findIndex((c: any) => c.id === newId);
+                if (existingIndex >= 0) {
+                    localCVs[existingIndex] = newCV;
+                } else {
+                    localCVs.push(newCV);
+                }
+
+                localStorage.setItem('cv_maker_local_cvs', JSON.stringify(localCVs));
+                return { id: newId, error: null };
+            } catch (localErr: any) {
+                return { id: '', error: err.message + ' (Local save also failed: ' + localErr.message + ')' };
+            }
         }
     },
 
@@ -78,7 +112,17 @@ export const CVService = {
 
             return { cv: data as SavedCV, error: null };
         } catch (err: any) {
-            return { cv: null, error: err.message };
+            console.warn('Supabase get failed, falling back to local storage:', err);
+            try {
+                const localCVs = JSON.parse(localStorage.getItem('cv_maker_local_cvs') || '[]');
+                const cv = localCVs.find((c: any) => c.id === cvId);
+                if (cv) {
+                    return { cv: cv as SavedCV, error: null };
+                }
+                return { cv: null, error: err.message };
+            } catch (localErr) {
+                return { cv: null, error: err.message };
+            }
         }
     },
 
@@ -93,7 +137,15 @@ export const CVService = {
 
             return { error: null };
         } catch (err: any) {
-            return { error: err.message };
+            console.warn('Supabase delete failed, falling back to local storage:', err);
+            try {
+                const localCVs = JSON.parse(localStorage.getItem('cv_maker_local_cvs') || '[]');
+                const newCVs = localCVs.filter((c: any) => c.id !== cvId);
+                localStorage.setItem('cv_maker_local_cvs', JSON.stringify(newCVs));
+                return { error: null };
+            } catch (localErr) {
+                return { error: err.message };
+            }
         }
     }
 };

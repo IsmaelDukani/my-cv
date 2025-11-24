@@ -30,10 +30,18 @@ async function extractTextFromPDF(file: File): Promise<string> {
     for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
-        const pageText = textContent.items
-            .map((item: any) => item.str)
-            .join(' ');
-        fullText += pageText + '\n';
+
+        let lastY, text = '';
+        for (const item of textContent.items as any[]) {
+            if (lastY == item.transform[5] || !lastY) {
+                text += item.str;
+            }
+            else {
+                text += '\n' + item.str;
+            }
+            lastY = item.transform[5];
+        }
+        fullText += text + '\n';
     }
 
     return fullText;
