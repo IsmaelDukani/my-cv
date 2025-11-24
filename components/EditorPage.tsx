@@ -77,12 +77,12 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
   return (
     <div className="h-screen flex flex-col bg-slate-50 dark:bg-slate-900">
       {/* Top Bar */}
-      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 flex items-center justify-between">
+      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-3 md:px-6 py-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <span className="text-lg font-bold text-slate-800 dark:text-slate-100 hidden md:inline">{t('appTitle')}</span>
-              <span className="text-lg font-bold text-slate-800 dark:text-slate-100 md:hidden">CV</span>
+              <span className="text-lg font-bold text-slate-800 dark:text-slate-100 hidden lg:inline">{t('appTitle')}</span>
+              <span className="text-lg font-bold text-slate-800 dark:text-slate-100 lg:hidden">CV</span>
             </Link>
           </div>
 
@@ -99,7 +99,7 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
           ) : (
             <button
               onClick={() => setShowTitleEdit(true)}
-              className="text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 max-w-[100px] md:max-w-none truncate"
+              className="text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 max-w-[80px] sm:max-w-[150px] lg:max-w-none truncate"
             >
               {cvTitle}
             </button>
@@ -113,7 +113,7 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
             </span>
           )}
 
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <ThemeLanguageControls />
           </div>
 
@@ -122,7 +122,8 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
             className="px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg flex items-center gap-2"
           >
             <FolderOpen className="w-4 h-4" />
-            <span className="hidden md:inline">{t('myCVs')}</span>
+            <FolderOpen className="w-4 h-4" />
+            <span className="hidden lg:inline">{t('myCVs')}</span>
           </button>
 
           <button
@@ -131,7 +132,8 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
             className="px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 flex items-center gap-2 disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
-            <span className="hidden md:inline">{saving ? t('saving') : t('save')}</span>
+            <Save className="w-4 h-4" />
+            <span className="hidden lg:inline">{saving ? t('saving') : t('save')}</span>
           </button>
 
           <button
@@ -139,7 +141,8 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
             className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 flex items-center gap-2"
           >
             <Download className="w-4 h-4" />
-            <span className="hidden md:inline">{t('export')}</span>
+            <Download className="w-4 h-4" />
+            <span className="hidden lg:inline">{t('export')}</span>
           </button>
 
           <DropdownMenu>
