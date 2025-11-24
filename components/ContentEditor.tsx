@@ -110,19 +110,15 @@ export function ContentEditor({ data, onChange, accessToken }: ContentEditorProp
     setAiError('');
 
     try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-5f27e429/rewrite`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            bullets: exp.bullets.filter(b => b.trim())
-          })
-        }
-      );
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bullets: exp.bullets.filter(b => b.trim())
+        })
+      });
 
       const result = await response.json();
 
@@ -155,20 +151,16 @@ export function ContentEditor({ data, onChange, accessToken }: ContentEditorProp
     setAiError('');
 
     try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-5f27e429/rewrite`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            text: data.personalInfo.summary,
-            type: 'summary'
-          })
-        }
-      );
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: data.personalInfo.summary,
+          type: 'summary'
+        })
+      });
 
       const result = await response.json();
 
