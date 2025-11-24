@@ -29,19 +29,75 @@ async function extractTextFromPDF(file: File): Promise<string> {
 
     for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1 });
         const textContent = await page.getTextContent();
+        const height = viewport.height;
+        const width = viewport.width;
 
-        let lastY, text = '';
-        for (const item of textContent.items as any[]) {
-            if (lastY == item.transform[5] || !lastY) {
-                text += item.str;
+        // PDF coordinates: (0,0) is usually bottom-left. Y increases upwards.
+        // We define a "Header" area as the top 15% of the page.
+        const headerThreshold = height * 0.85;
+        const colSplit = width * 0.5;
+
+        const items = textContent.items as any[];
+
+        // Categorize items
+        const headerItems: any[] = [];
+        const leftColItems: any[] = [];
+        const rightColItems: any[] = [];
+
+        items.forEach(item => {
+            const y = item.transform[5];
+            const x = item.transform[4];
+
+            if (y > headerThreshold) {
+                headerItems.push(item);
+            } else if (x < colSplit) {
+                leftColItems.push(item);
+            } else {
+                rightColItems.push(item);
             }
-            else {
-                text += '\n' + item.str;
+        });
+
+        // Sort function: Top to Bottom (descending Y), then Left to Right (ascending X)
+        const sortFn = (a: any, b: any) => {
+            if (Math.abs(a.transform[5] - b.transform[5]) > 5) { // 5 unit tolerance for same line
+                return b.transform[5] - a.transform[5]; // Descending Y
             }
-            lastY = item.transform[5];
-        }
-        fullText += text + '\n';
+            return a.transform[4] - b.transform[4]; // Ascending X
+        };
+
+        headerItems.sort(sortFn);
+        leftColItems.sort(sortFn);
+        rightColItems.sort(sortFn);
+
+        // Helper to join items with spaces/newlines
+        const joinItems = (sortedItems: any[]) => {
+            let text = '';
+            let lastY = -1;
+            let lastX = -1;
+
+            sortedItems.forEach(item => {
+                const x = item.transform[4];
+                const y = item.transform[5];
+                const str = item.str;
+
+                if (lastY !== -1 && Math.abs(y - lastY) > 5) {
+                    text += '\n';
+                } else if (lastX !== -1 && x - lastX > 10) { // Add space if gap
+                    text += ' ';
+                }
+
+                text += str;
+                lastY = y;
+                lastX = x + item.width; // Approximation if width available, else just x
+            });
+            return text + '\n';
+        };
+
+        fullText += joinItems(headerItems);
+        fullText += joinItems(leftColItems);
+        fullText += joinItems(rightColItems);
     }
 
     return fullText;
@@ -58,7 +114,9 @@ function parseCVText(text: string): CVData {
 
     // Basic Heuristics
     const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
-    const phoneRegex = /(\+?[\d\s-]{10,})/g;
+    // Phone regex: Look for 10-15 digits. Allow 3-4 digits in last group.
+    // Matches: +48 575 196 650, 123-456-7890, (123) 456-7890
+    const phoneRegex = /(?<!\d)(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{3,4}(?!\d)/g;
     const urlRegex = /(https?:\/\/[^\s]+)/g;
 
     const emailMatch = text.match(emailRegex);
@@ -82,10 +140,10 @@ function parseCVText(text: string): CVData {
     let currentSection: keyof typeof sections | null = 'summary'; // Default to summary for initial text
 
     const sectionKeywords = {
-        experience: ['experience', 'work history', 'employment', 'work experience'],
-        education: ['education', 'academic', 'qualifications'],
-        skills: ['skills', 'technologies', 'technical skills', 'competencies', 'languages'],
-        summary: ['summary', 'profile', 'about me', 'objective']
+        experience: ['experience', 'work history', 'employment', 'work experience', 'professional experience', 'career history'],
+        education: ['education', 'academic', 'qualifications', 'academic background'],
+        skills: ['skills', 'technologies', 'technical skills', 'competencies', 'languages', 'core competencies', 'technical proficiencies'],
+        summary: ['summary', 'profile', 'about me', 'objective', 'professional summary', 'professional profile', 'personal profile']
     };
 
     for (let i = 1; i < lines.length; i++) { // Skip name
@@ -95,7 +153,14 @@ function parseCVText(text: string): CVData {
         // Check if line is a section header
         let isHeader = false;
         for (const [section, keywords] of Object.entries(sectionKeywords)) {
-            if (keywords.some(k => lowerLine === k || lowerLine === k + ':')) {
+            // Check for exact match or match with colon
+            if (keywords.some(k => lowerLine === k || lowerLine === k + ':' || lowerLine.startsWith(k + ' '))) {
+                currentSection = section as keyof typeof sections;
+                isHeader = true;
+                break;
+            }
+            // Also check if the line is just the keyword (case insensitive) but maybe uppercase in original
+            if (keywords.some(k => line.toUpperCase() === k.toUpperCase())) {
                 currentSection = section as keyof typeof sections;
                 isHeader = true;
                 break;
