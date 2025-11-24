@@ -108,6 +108,8 @@ export const translations = {
 
     // Account Page
     myAccount: 'My Account',
+    dashboard: 'Dashboard',
+    account: 'Account',
     savedCVs: 'Your Saved CVs',
     createNewCV: 'Create New CV',
     loading: 'Loading...',
@@ -291,6 +293,8 @@ export const translations = {
 
     // Account Page
     myAccount: 'هەژمارەکەم',
+    dashboard: 'داشبۆرد',
+    account: 'هەژمار',
     savedCVs: 'CV-ی پاشەکەوتکراوەکانت',
     createNewCV: 'دروستکردنی CV-ی نوێ',
     loading: 'بارکردن...',
@@ -474,6 +478,8 @@ export const translations = {
 
     // Account Page
     myAccount: 'حسابي',
+    dashboard: 'لوحة التحكم',
+    account: 'الحساب',
     savedCVs: 'سيرك الذاتية المحفوظة',
     createNewCV: 'إنشاء سيرة ذاتية جديدة',
     loading: 'جاري التحميل...',
@@ -657,6 +663,8 @@ export const translations = {
 
     // Account Page
     myAccount: 'Moje konto',
+    dashboard: 'Pulpit',
+    account: 'Konto',
     savedCVs: 'Zapisane CV',
     createNewCV: 'Utwórz nowe CV',
     loading: 'Ładowanie...',

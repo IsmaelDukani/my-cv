@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Download, Sparkles, Palette, Eye, Menu, LogOut, FolderOpen } from 'lucide-react';
+import { Save, Download, Sparkles, Palette, Eye, LogOut, FolderOpen, User } from 'lucide-react';
+import Link from 'next/link';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { CVData } from './OnboardingFlow';
 import { Template, TemplateSelector } from './TemplateSelector';
 import { LivePreview } from './LivePreview';
@@ -71,8 +80,9 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
       <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <Menu className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-            <span className="text-lg text-slate-800 dark:text-slate-100">{t('appTitle')}</span>
+            <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <span className="text-lg font-bold text-slate-800 dark:text-slate-100">{t('appTitle')}</span>
+            </Link>
           </div>
 
           {showTitleEdit ? (
@@ -129,13 +139,30 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
             {t('export')}
           </button>
 
-          <button
-            onClick={onSignOut}
-            className="px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg flex items-center gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            {t('signOut')}
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
+                <User className="w-5 h-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{t('myAccount') || 'My Account'}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onViewAccount}>
+                <FolderOpen className="w-4 h-4 mr-2" />
+                {t('dashboard') || 'Dashboard'}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onViewAccount}>
+                <User className="w-4 h-4 mr-2" />
+                {t('account') || 'Account'}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onSignOut} className="text-red-600 dark:text-red-400">
+                <LogOut className="w-4 h-4 mr-2" />
+                {t('signOut')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
