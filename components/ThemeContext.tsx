@@ -1,5 +1,6 @@
 // components/ThemeContext.tsx
 "use client";
+// Fixed hydration error and syntax issues
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Language, translations, getTranslation } from './translations';
 
