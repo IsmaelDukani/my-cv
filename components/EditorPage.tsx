@@ -13,7 +13,6 @@ import { CVData } from './OnboardingFlow';
 import { Template, TemplateSelector } from './TemplateSelector';
 import { LivePreview } from './LivePreview';
 import { ContentEditor } from './ContentEditor';
-import { projectId, publicAnonKey } from '../components/info';
 import { CVService } from '../services/CVService';
 import { useTheme } from '../components/ThemeContext';
 import { ThemeLanguageControls } from './ThemeLanguageControls';

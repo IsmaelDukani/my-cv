@@ -1,14 +1,17 @@
 "use client";
 
-import { useTheme } from "next-themes";
+import { useTheme } from "../ThemeContext";
 import { Toaster as Sonner, ToasterProps } from "sonner";
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
+  const { theme } = useTheme();
+
+  // Map custom theme values to sonner's expected theme values
+  const sonnerTheme = theme === 'dark-glass' ? 'dark' : 'light';
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={sonnerTheme as ToasterProps["theme"]}
       className="toaster group"
       style={
         {

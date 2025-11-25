@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Plus, Trash2, Loader, ArrowLeft } from 'lucide-react';
-import { projectId, publicAnonKey } from '../components/info';
 import { CVData } from '../components/OnboardingFlow';
-import { LocalAuthService } from '../services/LocalAuthService';
+import { CVService } from '../services/CVService';
 import { useTheme } from '../components/ThemeContext';
 import { ThemeLanguageControls } from './ThemeLanguageControls';
 
@@ -10,8 +9,8 @@ interface SavedCV {
   id: string;
   title: string;
   template: string;
-  updatedAt: string;
-  createdAt: string;
+  updated_at: string;
+  created_at: string;
 }
 
 interface AccountPageProps {
@@ -38,7 +37,7 @@ export function AccountPage({ accessToken, user, onBack, onLoadCV, onCreateNew }
     setError('');
 
     try {
-      const { cvs, error } = await LocalAuthService.listCVs(user.id);
+      const { cvs, error } = await CVService.listCVs(user.id);
 
       if (error) throw new Error(error);
 
@@ -57,7 +56,7 @@ export function AccountPage({ accessToken, user, onBack, onLoadCV, onCreateNew }
     setDeleting(cvId);
 
     try {
-      const { error } = await LocalAuthService.deleteCV(cvId);
+      const { error } = await CVService.deleteCV(cvId);
 
       if (error) throw new Error(error);
 
@@ -157,7 +156,7 @@ export function AccountPage({ accessToken, user, onBack, onLoadCV, onCreateNew }
                 </div>
 
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                  {formatDate(cv.updatedAt)}
+                  {formatDate(cv.updated_at)}
                 </p>
 
                 <div className="flex gap-2">

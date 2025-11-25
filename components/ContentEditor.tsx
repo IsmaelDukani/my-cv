@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Sparkles, Loader } from 'lucide-react';
 import { CVData } from './OnboardingFlow';
-import { projectId, publicAnonKey } from '../components/info';
 import { useTheme } from '../components/ThemeContext';
 
 interface ContentEditorProps {

@@ -3,7 +3,6 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser, useClerk } from '@clerk/nextjs';
-import { supabase } from '../../lib/supabase';
 import { CVService } from '../../services/CVService';
 import { EditorPage as EditorComponent } from '../../components/EditorPage';
 import { OnboardingFlow, CVData } from '../../components/OnboardingFlow';

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Upload, FileText, AlertCircle } from 'lucide-react';
-import { projectId, publicAnonKey } from '../components/info';
 import { CVData } from './OnboardingFlow';
 import { useTheme } from '../components/ThemeContext';
 
