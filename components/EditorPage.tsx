@@ -35,6 +35,7 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
   const [cvId, setCvId] = useState<string | null>(null);
   const [cvTitle, setCvTitle] = useState(t('untitledCV'));
   const [showTitleEdit, setShowTitleEdit] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
@@ -66,13 +67,23 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
   };
 
   const handleExport = async () => {
+    console.log('Export button clicked');
+    setExporting(true);
+
     try {
+      console.log('Importing PDF export utility...');
       const { exportToPDF } = await import('../utils/pdfExport');
+
       const filename = `${cvTitle.replace(/[^a-z0-9]/gi, '_')}_CV.pdf`;
+      console.log('Exporting to PDF with filename:', filename);
+
       await exportToPDF('printable-cv', filename);
+      console.log('PDF export completed successfully');
     } catch (error) {
       console.error('Export error:', error);
-      alert('Failed to export PDF. Please try again.');
+      alert('Failed to export PDF: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -138,10 +149,11 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
 
           <button
             onClick={handleExport}
-            className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 flex items-center gap-2"
+            disabled={exporting}
+            className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" />
-            <span className="hidden lg:inline">{t('export')}</span>
+            <span className="hidden lg:inline">{exporting ? 'Exporting...' : t('export')}</span>
           </button>
 
           <DropdownMenu>
