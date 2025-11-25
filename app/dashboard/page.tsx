@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, FileText, Trash2, Loader2, LogOut, User, FolderOpen } from 'lucide-react';
-import { useUser, useClerk } from '@clerk/nextjs';
+import { useUser, useClerk, useAuth } from '@clerk/nextjs';
 import { CVService, SavedCV } from '../../services/CVService';
 import { useTheme } from '../../components/ThemeContext';
 import { ThemeLanguageControls } from '../../components/ThemeLanguageControls';
@@ -22,6 +22,7 @@ export default function Dashboard() {
     const { t } = useTheme();
     const { user, isLoaded, isSignedIn } = useUser();
     const { signOut } = useClerk();
+    const { getToken } = useAuth();
     const [loading, setLoading] = useState(true);
     const [cvs, setCvs] = useState<SavedCV[]>([]);
 
@@ -30,19 +31,41 @@ export default function Dashboard() {
             if (!isSignedIn) {
                 router.push('/');
             } else {
-                fetchCVs();
+                syncUserAndFetchCVs();
             }
         }
     }, [isLoaded, isSignedIn]);
 
+    const syncUserAndFetchCVs = async () => {
+        try {
+            const token = await getToken();
+            if (token) {
+                // Sync user with backend
+                await CVService.syncUser(token);
+                // Then fetch CVs
+                await fetchCVs();
+            }
+        } catch (error) {
+            console.error('Sync error:', error);
+            await fetchCVs();
+        }
+    };
+
     const fetchCVs = async () => {
         if (!user) return;
         setLoading(true);
-        const { cvs, error } = await CVService.listCVs(user.id);
-        if (error) {
+        try {
+            const token = await getToken();
+            if (!token) throw new Error('No authentication token');
+
+            const { cvs, error } = await CVService.listCVs(user.id, token);
+            if (error) {
+                console.error('Error fetching CVs:', error);
+            } else {
+                setCvs(cvs);
+            }
+        } catch (error) {
             console.error('Error fetching CVs:', error);
-        } else {
-            setCvs(cvs);
         }
         setLoading(false);
     };
@@ -50,8 +73,15 @@ export default function Dashboard() {
     const handleDelete = async (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
         if (confirm('Are you sure you want to delete this CV?')) {
-            await CVService.deleteCV(id);
-            fetchCVs();
+            try {
+                const token = await getToken();
+                if (!token) throw new Error('No authentication token');
+
+                await CVService.deleteCV(id, token);
+                fetchCVs();
+            } catch (error) {
+                console.error('Delete error:', error);
+            }
         }
     };
 

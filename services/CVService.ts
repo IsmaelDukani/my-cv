@@ -1,5 +1,7 @@
 import { CVData } from '../components/OnboardingFlow';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 export interface SavedCV {
     id: string;
     user_id: string;
@@ -10,76 +12,151 @@ export interface SavedCV {
     updated_at: string;
 }
 
-export const CVService = {
-    listCVs: async (userId: string): Promise<{ cvs: SavedCV[]; error: string | null }> => {
-        try {
-            if (!userId) throw new Error('User not authenticated');
+async function getAuthToken(): Promise<string | null> {
+    // This will be called from components that have access to Clerk's useAuth
+    // For now, we'll get it from the session
+    if (typeof window === 'undefined') return null;
 
-            const localCVs = JSON.parse(localStorage.getItem('cv_maker_local_cvs') || '[]');
-            const userCVs = localCVs
-                .filter((cv: SavedCV) => cv.user_id === userId)
-                .sort((a: SavedCV, b: SavedCV) =>
-                    new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-                );
-            return { cvs: userCVs, error: null };
+    try {
+        const response = await fetch('/api/auth/token');
+        const { token } = await response.json();
+        return token;
+    } catch {
+        return null;
+    }
+}
+
+export const CVService = {
+    listCVs: async (userId: string, token?: string): Promise<{ cvs: SavedCV[]; error: string | null }> => {
+        try {
+            if (!token) {
+                throw new Error('Authentication token required');
+            }
+
+            const response = await fetch(`${API_URL}/api/cvs`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to fetch CVs');
+            }
+
+            const { cvs } = await response.json();
+            return { cvs, error: null };
         } catch (err: any) {
+            console.error('List CVs error:', err);
             return { cvs: [], error: err.message };
         }
     },
 
-    saveCV: async (userId: string, cvId: string | null, title: string, template: string, data: CVData): Promise<{ id: string; error: string | null }> => {
+    saveCV: async (userId: string, cvId: string | null, title: string, template: string, data: CVData, token?: string): Promise<{ id: string; error: string | null }> => {
         try {
-            if (!userId) throw new Error('User not authenticated');
-
-            const localCVs = JSON.parse(localStorage.getItem('cv_maker_local_cvs') || '[]');
-            const newId = cvId || crypto.randomUUID();
-            const now = new Date().toISOString();
-
-            const newCV = {
-                id: newId,
-                user_id: userId,
-                title,
-                template,
-                data,
-                created_at: cvId ? (localCVs.find((c: any) => c.id === cvId)?.created_at || now) : now,
-                updated_at: now
-            };
-
-            const existingIndex = localCVs.findIndex((c: any) => c.id === newId);
-            if (existingIndex >= 0) {
-                localCVs[existingIndex] = newCV;
-            } else {
-                localCVs.push(newCV);
+            if (!token) {
+                throw new Error('Authentication token required');
             }
 
-            localStorage.setItem('cv_maker_local_cvs', JSON.stringify(localCVs));
-            return { id: newId, error: null };
+            const isUpdate = !!cvId;
+            const url = isUpdate ? `${API_URL}/api/cvs/${cvId}` : `${API_URL}/api/cvs`;
+            const method = isUpdate ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ title, template, data }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to save CV');
+            }
+
+            const { cv } = await response.json();
+            return { id: cv.id, error: null };
         } catch (err: any) {
+            console.error('Save CV error:', err);
             return { id: '', error: err.message };
         }
     },
 
-    getCV: async (cvId: string): Promise<{ cv: SavedCV | null; error: string | null }> => {
+    getCV: async (cvId: string, token?: string): Promise<{ cv: SavedCV | null; error: string | null }> => {
         try {
-            const localCVs = JSON.parse(localStorage.getItem('cv_maker_local_cvs') || '[]');
-            const cv = localCVs.find((c: any) => c.id === cvId);
-            if (cv) {
-                return { cv: cv as SavedCV, error: null };
+            if (!token) {
+                throw new Error('Authentication token required');
             }
-            return { cv: null, error: 'CV not found' };
+
+            const response = await fetch(`${API_URL}/api/cvs/${cvId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to fetch CV');
+            }
+
+            const { cv } = await response.json();
+            return { cv, error: null };
         } catch (err: any) {
+            console.error('Get CV error:', err);
             return { cv: null, error: err.message };
         }
     },
 
-    deleteCV: async (cvId: string): Promise<{ error: string | null }> => {
+    deleteCV: async (cvId: string, token?: string): Promise<{ error: string | null }> => {
         try {
-            const localCVs = JSON.parse(localStorage.getItem('cv_maker_local_cvs') || '[]');
-            const newCVs = localCVs.filter((c: any) => c.id !== cvId);
-            localStorage.setItem('cv_maker_local_cvs', JSON.stringify(newCVs));
+            if (!token) {
+                throw new Error('Authentication token required');
+            }
+
+            const response = await fetch(`${API_URL}/api/cvs/${cvId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to delete CV');
+            }
+
             return { error: null };
         } catch (err: any) {
+            console.error('Delete CV error:', err);
             return { error: err.message };
         }
-    }
+    },
+
+    // Sync user with backend (call this after login)
+    syncUser: async (token: string): Promise<{ error: string | null }> => {
+        try {
+            const response = await fetch(`${API_URL}/api/user/sync`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to sync user');
+            }
+
+            return { error: null };
+        } catch (err: any) {
+            console.error('Sync user error:', err);
+            return { error: err.message };
+        }
+    },
 };

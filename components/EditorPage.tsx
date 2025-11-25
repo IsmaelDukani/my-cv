@@ -47,7 +47,8 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
         cvId,
         cvTitle,
         template,
-        data
+        data,
+        accessToken // Pass the authentication token
       );
 
       if (error) throw new Error(error);

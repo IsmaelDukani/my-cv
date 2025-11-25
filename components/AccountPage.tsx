@@ -37,7 +37,7 @@ export function AccountPage({ accessToken, user, onBack, onLoadCV, onCreateNew }
     setError('');
 
     try {
-      const { cvs, error } = await CVService.listCVs(user.id);
+      const { cvs, error } = await CVService.listCVs(user.id, accessToken);
 
       if (error) throw new Error(error);
 
@@ -56,7 +56,7 @@ export function AccountPage({ accessToken, user, onBack, onLoadCV, onCreateNew }
     setDeleting(cvId);
 
     try {
-      const { error } = await CVService.deleteCV(cvId);
+      const { error } = await CVService.deleteCV(cvId, accessToken);
 
       if (error) throw new Error(error);
 
