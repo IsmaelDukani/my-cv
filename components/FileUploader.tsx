@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Upload, FileText, AlertCircle } from 'lucide-react';
 import { CVData } from './OnboardingFlow';
 import { useTheme } from '../components/ThemeContext';
+import { parseCV } from '@/utils/cvParser';
 
 interface FileUploaderProps {
   onComplete: (data: CVData) => void;
@@ -66,7 +67,6 @@ export function FileUploader({ onComplete, onBack }: FileUploaderProps) {
     setError('');
 
     try {
-      const { parseCV } = await import('../utils/cvParser');
       const data = await parseCV(file);
       onComplete(data);
     } catch (err: any) {

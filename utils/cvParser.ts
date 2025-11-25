@@ -1,9 +1,9 @@
-import * as pdfjsLib from 'pdfjs-dist';
+import { GlobalWorkerOptions, getDocument, version } from 'pdfjs-dist';
 import mammoth from 'mammoth';
 import { CVData } from '../components/OnboardingFlow';
 
 // Initialize PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
 
 export async function parseCV(file: File): Promise<CVData> {
     let text = '';
@@ -24,7 +24,7 @@ export async function parseCV(file: File): Promise<CVData> {
 
 async function extractTextFromPDF(file: File): Promise<string> {
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pdf = await getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
 
     for (let i = 1; i <= pdf.numPages; i++) {
