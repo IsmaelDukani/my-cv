@@ -1,5 +1,5 @@
 // components/ThemeContext.tsx
-"use client";   // ← ADD THIS LINE
+"use client";
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Language, translations, getTranslation } from './translations';
 
@@ -16,22 +16,25 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
   const [theme, setThemeState] = useState<Theme>('light');
   const [language, setLanguageState] = useState<Language>('en');
 
-  // Load preferences from localStorage
+  // Load preferences from localStorage only after mounting (client-side only)
   useEffect(() => {
+    setMounted(true);
+
     const savedTheme = localStorage.getItem('theme') as Theme | null;
     const savedLanguage = localStorage.getItem('language') as Language | null;
-    
+
     if (savedTheme && ['light', 'dark-glass'].includes(savedTheme)) {
       setThemeState(savedTheme);
       applyTheme(savedTheme);
     }
-    
+
     if (savedLanguage && ['en', 'ar', 'ku'].includes(savedLanguage)) {
       setLanguageState(savedLanguage);
-      
+
       // Set direction for RTL languages
       if (savedLanguage === 'ar') {
         document.documentElement.setAttribute('dir', 'rtl');
@@ -62,7 +65,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem('language', lang);
-    
+
     // Set direction and lang attribute
     if (lang === 'ar') {
       document.documentElement.setAttribute('dir', 'rtl');
@@ -76,6 +79,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const t = (key: keyof typeof translations.en): string => {
     return getTranslation(language, key);
   };
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, language, setLanguage, t }}>
