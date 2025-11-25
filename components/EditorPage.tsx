@@ -65,12 +65,15 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
     }
   };
 
-  const handleExport = () => {
-    // For prototype, use browser print
-    window.print();
-
-    // Note about PDF generation
-    alert('Use your browser\'s Print dialog to save as PDF.\n\nFor production, integrate jsPDF or a server-side PDF generation service.');
+  const handleExport = async () => {
+    try {
+      const { exportToPDF } = await import('../utils/pdfExport');
+      const filename = `${cvTitle.replace(/[^a-z0-9]/gi, '_')}_CV.pdf`;
+      await exportToPDF('printable-cv', filename);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export PDF. Please try again.');
+    }
   };
 
   return (
