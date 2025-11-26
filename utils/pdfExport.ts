@@ -1,85 +1,63 @@
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-
 export async function exportToPDF(elementId: string, filename: string = 'CV.pdf'): Promise<void> {
-    console.log('[PDF Export] Starting export process...');
-    console.log('[PDF Export] Element ID:', elementId);
-    console.log('[PDF Export] Filename:', filename);
+    console.log('[PDF Export] Starting server-side export process...');
 
     try {
         const element = document.getElementById(elementId);
         if (!element) {
-            console.error('[PDF Export] Element not found with ID:', elementId);
             throw new Error(`Element with ID "${elementId}" not found`);
         }
 
-        console.log('[PDF Export] Element found:', element);
+        // Get the HTML content and wrap it in cv-wrapper for proper A4 sizing
+        const html = `<div id="cv-wrapper">${element.outerHTML}</div>`;
 
-        // Temporarily show the element if it's hidden
-        const originalDisplay = element.style.display;
-        const originalVisibility = element.style.visibility;
-        const originalPosition = element.style.position;
-
-        element.style.display = 'block';
-        element.style.visibility = 'visible';
-        element.style.position = 'absolute';
-        element.style.left = '-9999px';
-        element.style.top = '0';
-
-        console.log('[PDF Export] Element temporarily shown for capture');
-
-        // Wait a bit for rendering
-        await new Promise(resolve => setTimeout(resolve, 200));
-
-        console.log('[PDF Export] Starting html2canvas capture...');
-
-        // Capture the element as a canvas
-        const canvas = await html2canvas(element, {
-            scale: 2,
-            useCORS: true,
-            logging: true,
-            backgroundColor: '#ffffff',
-            windowWidth: element.scrollWidth,
-            windowHeight: element.scrollHeight,
+        // Collect CSS from style tags
+        let css = '';
+        const styleTags = document.querySelectorAll('style');
+        styleTags.forEach(tag => {
+            css += tag.innerHTML + '\n';
         });
 
-        console.log('[PDF Export] Canvas captured successfully');
-        console.log('[PDF Export] Canvas dimensions:', canvas.width, 'x', canvas.height);
-
-        // Restore original styles
-        element.style.display = originalDisplay;
-        element.style.visibility = originalVisibility;
-        element.style.position = originalPosition;
-        element.style.left = '';
-        element.style.top = '';
-
-        console.log('[PDF Export] Element styles restored');
-
-        // Calculate PDF dimensions (A4 size)
-        const imgWidth = 210; // A4 width in mm
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        console.log('[PDF Export] Creating PDF with dimensions:', imgWidth, 'x', imgHeight, 'mm');
-
-        // Create PDF
-        const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4',
+        // Collect external stylesheets
+        const links: string[] = [];
+        const linkTags = document.querySelectorAll('link[rel="stylesheet"]');
+        linkTags.forEach(tag => {
+            links.push((tag as HTMLLinkElement).href);
         });
 
-        // Add image to PDF
-        const imgData = canvas.toDataURL('image/png');
-        console.log('[PDF Export] Image data created, length:', imgData.length);
+        // Get base URL for relative assets
+        const baseUrl = window.location.origin;
 
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-        console.log('[PDF Export] Image added to PDF');
+        // Send to API
+        const response = await fetch('/api/export-pdf', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ html, css, links, baseUrl }),
+        });
 
-        // Download the PDF
-        pdf.save(filename);
-        console.log('[PDF Export] PDF saved successfully as:', filename);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to generate PDF');
+        }
+
+        // Get the blob
+        const blob = await response.blob();
+
+        // Download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        console.log('[PDF Export] PDF downloaded successfully');
+
     } catch (error) {
-        console.error('[PDF Export] Error occurred:', error);
+        console.error('[PDF Export] Error:', error);
         throw error;
     }
 }

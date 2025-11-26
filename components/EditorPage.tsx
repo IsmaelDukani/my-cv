@@ -246,7 +246,7 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
             {activeTab === 'preview' && (
               <div className="lg:hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden p-4">
                 <div className="flex justify-center">
-                  <div className="transform scale-[0.6] sm:scale-75 origin-top">
+                  <div className="transform scale-[0.5] sm:scale-[0.6] origin-top">
                     <LivePreview data={data} template={template} />
                   </div>
                 </div>
@@ -263,7 +263,7 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
           </div>
 
           <div className="flex justify-center">
-            <div className="transform scale-90 origin-top">
+            <div className="transform scale-[0.7] origin-top">
               <LivePreview data={data} template={template} />
             </div>
           </div>

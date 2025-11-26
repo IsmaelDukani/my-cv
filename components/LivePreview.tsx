@@ -11,9 +11,18 @@ interface LivePreviewProps {
 export function LivePreview({ data, template }: LivePreviewProps) {
   const formatDate = (date: string) => {
     if (!date) return '';
-    const [year, month] = date.split('-');
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${monthNames[parseInt(month) - 1]} ${year}`;
+    // If it's just a year (4 digits), return it
+    if (/^\d{4}$/.test(date.trim())) return date;
+
+    // If it's YYYY-MM format
+    if (/^\d{4}-\d{2}$/.test(date)) {
+      const [year, month] = date.split('-');
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${monthNames[parseInt(month) - 1]} ${year}`;
+    }
+
+    // If it's already formatted (e.g. "Oct 2024"), return as is
+    return date;
   };
 
   const getSocialUrl = (input: string, type: 'linkedin' | 'github') => {
@@ -87,7 +96,7 @@ export function LivePreview({ data, template }: LivePreviewProps) {
 
   if (template === 'elegant') {
     return (
-      <div className="bg-white shadow-xl rounded-lg overflow-hidden flex flex-col" style={{ width: '595px', minHeight: '842px' }}>
+      <div className="bg-white flex flex-col" style={{ width: '210mm', minHeight: '297mm' }}>
         {/* Header */}
         <div className="bg-slate-800 text-white p-8 text-center">
           <h1 className="text-4xl font-light tracking-wider mb-2 uppercase">{data.personalInfo.name || 'Your Name'}</h1>
@@ -224,7 +233,7 @@ export function LivePreview({ data, template }: LivePreviewProps) {
   }
 
   return (
-    <div className={`${styles.bg} shadow-xl rounded-lg overflow-hidden`} style={{ width: '595px', minHeight: '842px' }}>
+    <div className={`${styles.bg}`} style={{ width: '210mm', minHeight: '297mm' }}>
       {/* Header */}
       <div className={`${styles.headerBg} ${styles.headerText} p-8`}>
         <h1 className="text-3xl mb-2">{data.personalInfo.name || 'Your Name'}</h1>

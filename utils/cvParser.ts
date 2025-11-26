@@ -341,42 +341,72 @@ function parseCVText(text: string): CVData {
                 line.includes('College') || line.includes('Internship');
 
             if (looksLikeDegree || (!currentEdu && line.length > 10)) {
-                // Save previous education if exists
+                // Check if we should merge with currentEdu instead of starting new
+                let merged = false;
                 if (currentEdu) {
-                    education.push(currentEdu);
+                    const isInstitution = line.includes('University') || line.includes('College');
+                    const isDegree = line.includes('Degree') || line.includes('Bachelor') || line.includes('Master');
+
+                    if ((!currentEdu.institution || currentEdu.institution === 'Institution') && isInstitution) {
+                        currentEdu.institution = line.replace(datePattern, '').trim();
+                        merged = true;
+                    } else if (!currentEdu.degree && isDegree) {
+                        currentEdu.degree = line.replace(datePattern, '').trim();
+                        merged = true;
+                    }
                 }
 
-                // Create new education entry
-                const dateMatch = line.match(datePattern);
-                let institution = '';
-                let degree = '';
-                let field = '';
-                let dates = dateMatch ? dateMatch[0] : '';
+                if (!merged) {
+                    // Save previous education if exists
+                    if (currentEdu) {
+                        education.push(currentEdu);
+                    }
 
-                // Try to extract institution and degree
-                if (line.includes('University') || line.includes('College')) {
-                    institution = line.replace(datePattern, '').trim();
+                    // Create new education entry
+                    const dateMatch = line.match(datePattern);
+                    let institution = '';
+                    let degree = '';
+                    let field = '';
+                    let dates = dateMatch ? dateMatch[0] : '';
+
+                    // Try to extract institution and degree
+                    if (line.includes('University') || line.includes('College')) {
+                        institution = line.replace(datePattern, '').trim();
+                    } else {
+                        degree = line.replace(datePattern, '').trim();
+                    }
+
+                    currentEdu = {
+                        id: crypto.randomUUID(),
+                        institution: institution || '', // Removed 'Institution' placeholder
+                        degree: degree || '',
+                        field: field,
+                        startDate: '',
+                        endDate: '',
+                        gpa: ''
+                    };
+
+                    // Parse dates
+                    if (dates.includes('-')) {
+                        const parts = dates.split('-').map(p => p.trim());
+                        currentEdu.startDate = parts[0];
+                        currentEdu.endDate = parts[1];
+                    } else if (dates) {
+                        currentEdu.endDate = dates;
+                    }
                 } else {
-                    degree = line.replace(datePattern, '').trim();
-                }
-
-                currentEdu = {
-                    id: crypto.randomUUID(),
-                    institution: institution || 'Institution',
-                    degree: degree || '',
-                    field: field,
-                    startDate: '',
-                    endDate: '',
-                    gpa: ''
-                };
-
-                // Parse dates
-                if (dates.includes('-')) {
-                    const parts = dates.split('-').map(p => p.trim());
-                    currentEdu.startDate = parts[0];
-                    currentEdu.endDate = parts[1];
-                } else if (dates) {
-                    currentEdu.endDate = dates;
+                    // If merged, we might still need to extract dates from this line if they weren't there before
+                    const dateMatch = line.match(datePattern);
+                    if (dateMatch) {
+                        const dates = dateMatch[0];
+                        if (dates.includes('-')) {
+                            const parts = dates.split('-').map(p => p.trim());
+                            currentEdu.startDate = parts[0];
+                            currentEdu.endDate = parts[1];
+                        } else if (dates) {
+                            currentEdu.endDate = dates;
+                        }
+                    }
                 }
             } else if (currentEdu) {
                 // Additional info for current education
