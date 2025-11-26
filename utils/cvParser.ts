@@ -129,15 +129,30 @@ function parseCVText(text: string): CVData {
     // Guess Name (usually first line or first non-empty line)
     const name = lines[0] || '';
 
+    // Try to guess job title (usually second line)
+    let title = '';
+    let location = '';
+
+    // Look for common location patterns in first few lines
+    const locationRegex = /(?:^|\s)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z]{2,}(?:\s+\d{5})?)/;
+    for (let i = 1; i < Math.min(lines.length, 5); i++) {
+        const locMatch = lines[i].match(locationRegex);
+        if (locMatch) {
+            location = locMatch[1];
+            break;
+        }
+    }
+
     // Identify Sections
     const sections = {
         experience: [] as string[],
         education: [] as string[],
         skills: [] as string[],
-        summary: [] as string[]
+        summary: [] as string[],
+        header: [] as string[] // For lines before first section
     };
 
-    let currentSection: keyof typeof sections | null = 'summary'; // Default to summary for initial text
+    let currentSection: keyof typeof sections | null = null; // Don't assume summary
 
     const sectionKeywords = {
         experience: ['experience', 'work history', 'employment', 'work experience', 'professional experience', 'career history'],
@@ -149,6 +164,16 @@ function parseCVText(text: string): CVData {
     for (let i = 1; i < lines.length; i++) { // Skip name
         const line = lines[i];
         const lowerLine = line.toLowerCase();
+
+        // Skip if it's email, phone, or URL (already extracted)
+        if (emailRegex.test(line) || phoneRegex.test(line) || urlRegex.test(line)) {
+            continue;
+        }
+
+        // Skip if it matches location
+        if (location && line.includes(location)) {
+            continue;
+        }
 
         // Check if line is a section header
         let isHeader = false;
@@ -167,9 +192,20 @@ function parseCVText(text: string): CVData {
             }
         }
 
-        if (!isHeader && currentSection) {
-            sections[currentSection].push(line);
+        if (!isHeader) {
+            if (currentSection) {
+                sections[currentSection].push(line);
+            } else {
+                // Before first section - likely part of header/title
+                sections.header.push(line);
+            }
         }
+    }
+
+    // Extract title from header if not in a dedicated section
+    if (!title && sections.header.length > 0) {
+        // First non-contact line in header is likely the title
+        title = sections.header[0] || '';
     }
 
     // Parse Experience
@@ -212,8 +248,8 @@ function parseCVText(text: string): CVData {
             name,
             email: emailMatch ? emailMatch[0] : '',
             phone: phoneMatch ? phoneMatch[0] : '',
-            location: '',
-            title: '',
+            location,
+            title,
             summary: sections.summary.join('\n'),
             linkedin,
             github
