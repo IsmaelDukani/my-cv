@@ -33,7 +33,11 @@ function EditorContent() {
     const checkUser = async () => {
         if (!user) return;
         const token = await getToken();
-        if (token) setAccessToken(token);
+        if (token) {
+            setAccessToken(token);
+            // Sync user with backend to ensure they exist in the database
+            await CVService.syncUser(token);
+        }
 
         if (cvId) {
             loadCV(cvId, user.id, token);
