@@ -146,7 +146,8 @@ export function ContentEditor({ data, onChange, accessToken }: ContentEditorProp
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          bullets: exp.bullets.filter(b => b.trim())
+          bullets: exp.bullets.filter(b => b.trim()),
+          type: 'bullets'
         })
       });
 
