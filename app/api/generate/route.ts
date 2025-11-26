@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY?.trim();
-const MODEL_NAME = 'gemini-1.5-flash';
+const MODEL_NAME = 'gemini-1.5-flash-latest';
 
 export async function POST(req: Request) {
     if (!GOOGLE_AI_API_KEY) {
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
         console.log('Calling Google Gemini API...');
 
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GOOGLE_AI_API_KEY}`;
+        const API_URL = `https://generativelanguage.googleapis.com/v1/models/${MODEL_NAME}:generateContent?key=${GOOGLE_AI_API_KEY}`;
 
         const response = await fetch(API_URL, {
             method: 'POST',
