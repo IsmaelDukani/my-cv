@@ -108,8 +108,25 @@ export const CVService = {
         }
     },
 
-    // Sync user placeholder (no server action needed currently)
+    // Sync user with backend to ensure they exist in the database
     syncUser: async (token?: string | null): Promise<{ error: string | null }> => {
-        return { error: null };
+        try {
+            const headers: HeadersInit = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const response = await fetch('/api/user/sync', {
+                method: 'POST',
+                headers,
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Failed to sync user');
+            }
+            return { error: null };
+        } catch (err: any) {
+            console.error('Sync user error:', err);
+            return { error: err.message };
+        }
     },
 };
