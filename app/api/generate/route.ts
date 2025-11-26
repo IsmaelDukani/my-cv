@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 
-const MOONSHOT_API_KEY = process.env.MOONSHOT_API_KEY?.trim();
-const API_URL = 'https://api.moonshot.cn/v1/chat/completions';
+const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY?.trim();
+const MODEL_NAME = 'gemini-1.5-flash';
 
 export async function POST(req: Request) {
-    if (!MOONSHOT_API_KEY) {
+    if (!GOOGLE_AI_API_KEY) {
         return NextResponse.json(
-            { error: 'Moonshot API key not configured' },
+            { error: 'Google AI API key not configured' },
             { status: 500 }
         );
     }
@@ -18,39 +18,43 @@ export async function POST(req: Request) {
         let userPrompt = "";
 
         if (type === 'summary') {
-            userPrompt = `Rewrite the following professional summary. Return ONLY the rewritten text, no explanations or quotes.\n\nOriginal: "${text}"`;
+            userPrompt = `${systemPrompt}\n\nRewrite the following professional summary. Return ONLY the rewritten text, no explanations or quotes.\n\nOriginal: "${text}"`;
         } else if (bullets) {
-            userPrompt = `Rewrite the following resume bullet points. Return the result as a JSON array of strings, e.g. ["bullet 1", "bullet 2"]. Do not include markdown formatting like \`\`\`json.\n\nOriginal bullets:\n${JSON.stringify(bullets)}`;
+            userPrompt = `${systemPrompt}\n\nRewrite the following resume bullet points. Return the result as a JSON array of strings, e.g. ["bullet 1", "bullet 2"]. Do not include markdown formatting like \`\`\`json.\n\nOriginal bullets:\n${JSON.stringify(bullets)}`;
         } else {
             return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
         }
 
-        console.log('Calling Moonshot API with key:', MOONSHOT_API_KEY.substring(0, 5) + '...');
+        console.log('Calling Google Gemini API...');
+
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GOOGLE_AI_API_KEY}`;
 
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${MOONSHOT_API_KEY}`
             },
             body: JSON.stringify({
-                model: "moonshot-v1-8k",
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: userPrompt }
-                ],
-                temperature: 0.7
+                contents: [{
+                    parts: [{
+                        text: userPrompt
+                    }]
+                }],
+                generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 1024,
+                }
             })
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            console.error('Moonshot API Error:', errorData);
-            throw new Error(errorData.error?.message || 'Moonshot API request failed');
+            console.error('Google AI API Error:', errorData);
+            throw new Error(errorData.error?.message || 'Google AI API request failed');
         }
 
         const data = await response.json();
-        const generatedText = data.choices?.[0]?.message?.content;
+        const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (!generatedText) {
             throw new Error('No content generated');
