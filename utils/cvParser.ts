@@ -208,36 +208,205 @@ function parseCVText(text: string): CVData {
         title = sections.header[0] || '';
     }
 
-    // Parse Experience
+    // Parse Experience with better structure
     const experiences = [];
     if (sections.experience.length > 0) {
-        // Very naive experience parsing: assume blocks of text are experiences
-        // This is hard to do accurately without AI, so we'll dump the text into one block for now
-        // or try to split by dates if possible.
-        // For now, let's create one "Imported Experience" block with all bullets
-        experiences.push({
-            id: crypto.randomUUID(),
-            company: 'Imported Experience',
-            position: 'See details below',
-            location: '',
-            startDate: '',
-            endDate: '',
-            current: false,
-            bullets: sections.experience
-        });
+        // Try to parse individual experience entries
+        // Look for patterns: Job Title, Company | Date
+        // Or: Job Title - Company (Date)
+
+        let currentJob: any = null;
+        const datePattern = /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}(?:\s*-\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}|Present)?/;
+
+        for (const line of sections.experience) {
+            // Check if this line looks like a job title/company line
+            const hasDate = datePattern.test(line);
+            const hasPipe = line.includes('|');
+            const hasDash = line.includes('—') || line.includes(' - ');
+
+            // If line contains a date or separator, it's likely a new job entry
+            if (hasDate || (hasPipe && !currentJob) || (line.includes(':') && !currentJob)) {
+                // Save previous job if exists
+                if (currentJob && currentJob.bullets.length > 0) {
+                    experiences.push(currentJob);
+                }
+
+                // Parse new job
+                const dateMatch = line.match(datePattern);
+                let position = '';
+                let company = '';
+                let location = '';
+                let dates = dateMatch ? dateMatch[0] : '';
+
+                if (hasPipe) {
+                    // Format: Position | Company | Date
+                    const parts = line.split('|').map(p => p.trim());
+                    position = parts[0] || '';
+                    company = parts[1] || '';
+                    if (parts.length > 2 && !dates) {
+                        dates = parts[2] || '';
+                    }
+                } else if (hasDash || line.includes('—')) {
+                    // Format: Position — Company or Position - Company
+                    const separator = line.includes('—') ? '—' : ' - ';
+                    const parts = line.split(separator).map(p => p.trim());
+                    position = parts[0] || '';
+                    const rest = parts.slice(1).join(separator);
+                    company = rest.replace(datePattern, '').trim();
+                } else {
+                    // Fallback: treat entire line as position
+                    position = line.replace(datePattern, '').trim();
+                }
+
+                // Parse dates
+                let startDate = '';
+                let endDate = '';
+                let current = false;
+
+                if (dates) {
+                    const dateParts = dates.split(/[-–—]/);
+                    if (dateParts.length > 0) {
+                        startDate = dateParts[0].trim();
+                    }
+                    if (dateParts.length > 1) {
+                        const end = dateParts[1].trim();
+                        if (end.toLowerCase() === 'present') {
+                            endDate = 'Present';
+                            current = true;
+                        } else {
+                            endDate = end;
+                        }
+                    }
+                }
+
+                currentJob = {
+                    id: crypto.randomUUID(),
+                    company: company || 'Company',
+                    position: position || 'Position',
+                    location,
+                    startDate,
+                    endDate,
+                    current,
+                    bullets: []
+                };
+            } else if (currentJob && line.startsWith('•')) {
+                // Bullet point
+                currentJob.bullets.push(line.replace(/^•\s*/, '').trim());
+            } else if (currentJob && line.trim()) {
+                // Could be a bullet without marker, or location, or company info
+                // If it's short and no current company, might be company
+                if (!currentJob.company || currentJob.company === 'Company') {
+                    currentJob.company = line.trim();
+                } else if (!currentJob.location && line.includes(',')) {
+                    currentJob.location = line.trim();
+                } else if (line.length > 20) {
+                    // Likely a bullet point
+                    currentJob.bullets.push(line.trim());
+                }
+            }
+        }
+
+        // Don't forget the last job
+        if (currentJob && currentJob.bullets.length > 0) {
+            experiences.push(currentJob);
+        }
+
+        // If no structured jobs found, create one generic entry
+        if (experiences.length === 0) {
+            experiences.push({
+                id: crypto.randomUUID(),
+                company: 'Imported Experience',
+                position: 'See details below',
+                location: '',
+                startDate: '',
+                endDate: '',
+                current: false,
+                bullets: sections.experience
+            });
+        }
     }
 
-    // Parse Education
+    // Parse Education with better structure
     const education = [];
     if (sections.education.length > 0) {
-        education.push({
-            id: crypto.randomUUID(),
-            institution: 'Imported Education',
-            degree: sections.education.join(', '),
-            field: '',
-            startDate: '',
-            endDate: ''
-        });
+        let currentEdu: any = null;
+        const datePattern = /\d{4}\s*-\s*\d{4}|\d{4}/;
+
+        for (const line of sections.education) {
+            const hasDate = datePattern.test(line);
+
+            // Lines with dates or that look like degree names are likely new education entries
+            const looksLikeDegree = line.includes('Master') || line.includes('Bachelor') ||
+                line.includes('Degree') || line.includes('University') ||
+                line.includes('College') || line.includes('Internship');
+
+            if (looksLikeDegree || (!currentEdu && line.length > 10)) {
+                // Save previous education if exists
+                if (currentEdu) {
+                    education.push(currentEdu);
+                }
+
+                // Create new education entry
+                const dateMatch = line.match(datePattern);
+                let institution = '';
+                let degree = '';
+                let field = '';
+                let dates = dateMatch ? dateMatch[0] : '';
+
+                // Try to extract institution and degree
+                if (line.includes('University') || line.includes('College')) {
+                    institution = line.replace(datePattern, '').trim();
+                } else {
+                    degree = line.replace(datePattern, '').trim();
+                }
+
+                currentEdu = {
+                    id: crypto.randomUUID(),
+                    institution: institution || 'Institution',
+                    degree: degree || '',
+                    field: field,
+                    startDate: '',
+                    endDate: '',
+                    gpa: ''
+                };
+
+                // Parse dates
+                if (dates.includes('-')) {
+                    const parts = dates.split('-').map(p => p.trim());
+                    currentEdu.startDate = parts[0];
+                    currentEdu.endDate = parts[1];
+                } else if (dates) {
+                    currentEdu.endDate = dates;
+                }
+            } else if (currentEdu) {
+                // Additional info for current education
+                if (!currentEdu.degree && line.includes('Degree')) {
+                    currentEdu.degree = line.replace(datePattern, '').trim();
+                } else if (!currentEdu.institution && line.length > 10) {
+                    currentEdu.institution = line.replace(datePattern, '').trim();
+                } else if (!currentEdu.field && line.length > 5 && !hasDate) {
+                    currentEdu.field = line.trim();
+                }
+            }
+        }
+
+        // Don't forget the last education entry
+        if (currentEdu) {
+            education.push(currentEdu);
+        }
+
+        // Fallback if no structured entries found
+        if (education.length === 0) {
+            education.push({
+                id: crypto.randomUUID(),
+                institution: 'Imported Education',
+                degree: sections.education.join(', '),
+                field: '',
+                startDate: '',
+                endDate: '',
+                gpa: ''
+            });
+        }
     }
 
     // Parse Skills
