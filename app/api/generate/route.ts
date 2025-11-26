@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY?.trim();
-const MODEL_NAME = 'gemini-1.5-flash-latest';
+const MODEL_NAME = 'gemini-1.5-flash';
 
 export async function POST(req: Request) {
     if (!GOOGLE_AI_API_KEY) {
