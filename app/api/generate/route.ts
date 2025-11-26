@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     try {
         const { text, type, bullets } = await req.json();
 
-        let systemPrompt = "You are a professional CV writer. Your goal is to rewrite text to be more impactful, concise, and result-oriented using active voice.";
+        const systemPrompt = "You are a professional CV writer. Your goal is to rewrite text to be more impactful, concise, and result-oriented using active voice.";
         let userPrompt = "";
 
         if (type === 'summary') {

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useUser, useClerk } from '@clerk/nextjs';
+import { useUser, useClerk, useAuth } from '@clerk/nextjs';
 import { CVService } from '../../services/CVService';
 import { EditorPage as EditorComponent } from '../../components/EditorPage';
 import { OnboardingFlow, CVData } from '../../components/OnboardingFlow';
@@ -14,9 +14,11 @@ function EditorContent() {
     const cvId = searchParams.get('id');
     const { user, isLoaded, isSignedIn } = useUser();
     const { signOut } = useClerk();
+    const { getToken } = useAuth();
     const [loading, setLoading] = useState(true);
     const [initialData, setInitialData] = useState<CVData | null>(null);
     const [showOnboarding, setShowOnboarding] = useState(false);
+    const [accessToken, setAccessToken] = useState<string>('');
 
     useEffect(() => {
         if (isLoaded) {
@@ -30,9 +32,11 @@ function EditorContent() {
 
     const checkUser = async () => {
         if (!user) return;
+        const token = await getToken();
+        if (token) setAccessToken(token);
 
         if (cvId) {
-            loadCV(cvId, user.id);
+            loadCV(cvId, user.id, token);
         } else {
             // No ID means new CV - show onboarding
             setShowOnboarding(true);
@@ -40,8 +44,8 @@ function EditorContent() {
         }
     };
 
-    const loadCV = async (id: string, userId: string) => {
-        const { cv, error } = await CVService.getCV(id);
+    const loadCV = async (id: string, userId: string, token: string | null) => {
+        const { cv, error } = await CVService.getCV(id, token);
         if (error || !cv) {
             console.error('Error loading CV:', error);
             alert('Failed to load CV');
@@ -84,7 +88,7 @@ function EditorContent() {
     return (
         <EditorComponent
             initialData={initialData}
-            accessToken="clerk-token" // Placeholder
+            accessToken={accessToken}
             user={user}
             onSignOut={handleSignOut}
             onViewAccount={() => router.push('/dashboard')}

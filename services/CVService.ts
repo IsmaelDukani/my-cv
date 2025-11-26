@@ -12,10 +12,13 @@ export interface SavedCV {
 
 export const CVService = {
     // List CVs for the current user
-    listCVs: async (userId: string): Promise<{ cvs: SavedCV[]; error: string | null }> => {
+    listCVs: async (userId: string, token?: string | null): Promise<{ cvs: SavedCV[]; error: string | null }> => {
         try {
+            const headers: HeadersInit = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
             const response = await fetch('/api/cvs', {
-                headers: { 'Content-Type': 'application/json' },
+                headers,
             });
             if (!response.ok) {
                 const err = await response.json();
@@ -35,15 +38,20 @@ export const CVService = {
         cvId: string | null,
         title: string,
         template: string,
-        data: CVData
+        data: CVData,
+        token?: string | null
     ): Promise<{ id: string; error: string | null }> => {
         try {
             const isUpdate = !!cvId;
             const url = isUpdate ? `/api/cvs/${cvId}` : '/api/cvs';
             const method = isUpdate ? 'PUT' : 'POST';
+
+            const headers: HeadersInit = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
             const response = await fetch(url, {
                 method,
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ title, template, data }),
             });
             if (!response.ok) {
@@ -59,10 +67,13 @@ export const CVService = {
     },
 
     // Get a specific CV
-    getCV: async (cvId: string): Promise<{ cv: SavedCV | null; error: string | null }> => {
+    getCV: async (cvId: string, token?: string | null): Promise<{ cv: SavedCV | null; error: string | null }> => {
         try {
+            const headers: HeadersInit = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
             const response = await fetch(`/api/cvs/${cvId}`, {
-                headers: { 'Content-Type': 'application/json' },
+                headers,
             });
             if (!response.ok) {
                 const err = await response.json();
@@ -77,11 +88,14 @@ export const CVService = {
     },
 
     // Delete a CV
-    deleteCV: async (cvId: string): Promise<{ error: string | null }> => {
+    deleteCV: async (cvId: string, token?: string | null): Promise<{ error: string | null }> => {
         try {
+            const headers: HeadersInit = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
             const response = await fetch(`/api/cvs/${cvId}`, {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
             });
             if (!response.ok) {
                 const err = await response.json();
@@ -95,7 +109,7 @@ export const CVService = {
     },
 
     // Sync user placeholder (no server action needed currently)
-    syncUser: async (): Promise<{ error: string | null }> => {
+    syncUser: async (token?: string | null): Promise<{ error: string | null }> => {
         return { error: null };
     },
 };
