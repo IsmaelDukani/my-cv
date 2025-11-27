@@ -42,22 +42,36 @@ export async function POST(req: Request) {
         // Fetch and inline external stylesheets for PDF generation
         let inlinedCss = css; // Start with inline styles
 
+        console.log(`[PDF Export] Starting CSS inlining. Base URL: ${baseUrl}`);
+        console.log(`[PDF Export] Number of stylesheets to fetch: ${links.length}`);
+
         // Fetch each external stylesheet and add to inlined CSS
         for (const href of links) {
             try {
-                console.log(`Fetching stylesheet: ${href}`);
-                const response = await fetch(href);
+                // Ensure absolute URL
+                const absoluteUrl = href.startsWith('http') ? href : `${baseUrl}${href.startsWith('/') ? '' : '/'}${href}`;
+                console.log(`[PDF Export] Fetching stylesheet: ${absoluteUrl}`);
+
+                const response = await fetch(absoluteUrl, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (PDF Generator)',
+                    },
+                });
+
                 if (response.ok) {
                     const stylesheetContent = await response.text();
-                    inlinedCss += `\n/* Inlined from: ${href} */\n${stylesheetContent}\n`;
-                    console.log(`Successfully inlined stylesheet: ${href}`);
+                    const contentLength = stylesheetContent.length;
+                    inlinedCss += `\n/* Inlined from: ${absoluteUrl} (${contentLength} bytes) */\n${stylesheetContent}\n`;
+                    console.log(`[PDF Export] ✓ Successfully inlined: ${absoluteUrl} (${contentLength} bytes)`);
                 } else {
-                    console.warn(`Failed to fetch stylesheet: ${href} (${response.status})`);
+                    console.error(`[PDF Export] ✗ Failed to fetch: ${absoluteUrl} - Status: ${response.status} ${response.statusText}`);
                 }
             } catch (error) {
-                console.error(`Error fetching stylesheet ${href}:`, error);
+                console.error(`[PDF Export] ✗ Error fetching stylesheet ${href}:`, error);
             }
         }
+
+        console.log(`[PDF Export] Total CSS size after inlining: ${inlinedCss.length} bytes`);
 
         // Set the content with all CSS inlined
         const fullHtml = `
