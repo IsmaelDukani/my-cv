@@ -2,13 +2,16 @@ export async function exportToPDF(elementId: string, filename: string = 'CV.pdf'
     console.log('[PDF Export] Starting server-side export process...');
 
     try {
+        // Get the CV element
         const element = document.getElementById(elementId);
         if (!element) {
             throw new Error(`Element with ID "${elementId}" not found`);
         }
 
-        // Get the HTML content and wrap it in cv-wrapper for proper A4 sizing
-        const html = `<div id="cv-wrapper">${element.outerHTML}</div>`;
+        // Get ONLY the inner CV HTML, not the preview wrapper
+        // Look for the actual CV content inside the printable element
+        const cvContent = element.querySelector('.bg-white, [class*="bg-"]') || element;
+        const html = cvContent.innerHTML;
 
         // Collect CSS from style tags
         let css = '';

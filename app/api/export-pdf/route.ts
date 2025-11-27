@@ -1,165 +1,93 @@
 import { NextResponse } from 'next/server';
-import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
+import puppeteer from 'puppeteer-core';
 
 export async function POST(req: Request) {
     try {
-        const { html, css, links = [], baseUrl } = await req.json();
+        const { html, css = '', links = [], baseUrl = '' } = await req.json();
+        if (!html) return NextResponse.json({ error: 'HTML required' }, { status: 400 });
 
-        if (!html) {
-            return NextResponse.json(
-                { error: 'HTML content is required' },
-                { status: 400 }
-            );
-        }
-
-        // Detect if we're in production (Vercel) or development (local)
-        const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-
-        // Launch the browser with appropriate configuration
-        const browser = await puppeteer.launch(
-            isProduction
-                ? {
-                    // Production (Vercel): Use serverless Chrome
-                    args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'],
-                    executablePath: await chromium.executablePath(),
-                    headless: true,
-                }
-                : {
-                    // Development (Local): Use local Chrome/Chromium
-                    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-                    executablePath: process.platform === 'win32'
-                        ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-                        : process.platform === 'darwin'
-                            ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-                            : '/usr/bin/google-chrome',
-                    headless: true,
-                }
-        );
+        const browser = await puppeteer.launch({
+            args: chromium.args,
+            executablePath: await chromium.executablePath(),
+            headless: true,
+        });
 
         const page = await browser.newPage();
 
-        // Fetch and inline external stylesheets for PDF generation
-        let inlinedCss = css; // Start with inline styles
+        const linkTags = links.map((h: string) => `<link rel="stylesheet" href="${h}" />`).join('\n');
 
-        console.log(`[PDF Export] Starting CSS inlining. Base URL: ${baseUrl}`);
-        console.log(`[PDF Export] Number of stylesheets to fetch: ${links.length}`);
+        const finalHtml = `
+      <!doctype html>
+      <html>
+      <head>
+        <base href="${baseUrl}/" />
+        ${linkTags}
+        <style>
+          ${css}
 
-        // Fetch each external stylesheet and add to inlined CSS
-        for (const href of links) {
-            try {
-                // Ensure absolute URL
-                const absoluteUrl = href.startsWith('http') ? href : `${baseUrl}${href.startsWith('/') ? '' : '/'}${href}`;
-                console.log(`[PDF Export] Fetching stylesheet: ${absoluteUrl}`);
+          html, body {
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+          }
 
-                const response = await fetch(absoluteUrl, {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (PDF Generator)',
-                    },
-                });
+          /* A4 wrapper */
+          #cv-wrapper {
+            width: 210mm !important;
+            min-height: 297mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+            background: white !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+          }
 
-                if (response.ok) {
-                    const stylesheetContent = await response.text();
-                    const contentLength = stylesheetContent.length;
-                    inlinedCss += `\n/* Inlined from: ${absoluteUrl} (${contentLength} bytes) */\n${stylesheetContent}\n`;
-                    console.log(`[PDF Export] ✓ Successfully inlined: ${absoluteUrl} (${contentLength} bytes)`);
-                } else {
-                    console.error(`[PDF Export] ✗ Failed to fetch: ${absoluteUrl} - Status: ${response.status} ${response.statusText}`);
-                }
-            } catch (error) {
-                console.error(`[PDF Export] ✗ Error fetching stylesheet ${href}:`, error);
-            }
-        }
+          /* Remove preview UI */
+          .preview-wrapper, .card, .live-preview, .container, .preview-card {
+            all: unset !important;
+            display: block !important;
+          }
 
-        console.log(`[PDF Export] Total CSS size after inlining: ${inlinedCss.length} bytes`);
+          /* Prevent chip/tag wrapping */
+          .chip, .tag, .badge {
+            white-space: nowrap !important;
+            display: inline-block !important;
+          }
 
-        // Set the content with all CSS inlined
-        const fullHtml = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <base href="${baseUrl || ''}/" />
-                <style>
-                    ${inlinedCss}
-                    
-                    /* Global styles */
-                    html, body {
-                        margin: 0;
-                        padding: 0;
-                        width: 100%;
-                        background: white !important;
-                    }
-                    
-                    /* CV Wrapper with A4 dimensions */
-                    #cv-wrapper {
-                        width: 210mm !important;
-                        min-height: 297mm !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        box-sizing: border-box !important;
-                        display: block !important;
-                    }
-                    
-                    /* Fix blue text-chips wrapping issue */
-                    .chip, .tag, [class*="rounded"], span[class*="px-"] {
-                        white-space: nowrap !important;
-                    }
+          @media print {
+            @page { size: A4; margin: 0; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
+        </style>
+      </head>
+      <body>
+        <div id="cv-wrapper">${html}</div>
+      </body>
+      </html>
+    `;
 
-                    /* Ensure print styles are applied */
-                    @media print {
-                        @page {
-                            size: A4;
-                            margin: 0;
-                        }
-                        body {
-                            -webkit-print-color-adjust: exact;
-                            print-color-adjust: exact;
-                        }
-                    }
-                </style>
-            </head>
-            <body>
-                ${html}
-            </body>
-            </html>
-        `;
+        await page.setContent(finalHtml, { waitUntil: 'networkidle0' });
+        await page.evaluateHandle('document.fonts.ready');
 
-        await page.setContent(fullHtml, {
-            waitUntil: ['networkidle0', 'load'],
-        });
-
-        // Small delay to ensure styles are applied
-        await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 500)));
-
-        // Generate PDF
-        const pdfBuffer = await page.pdf({
+        const pdf = await page.pdf({
             format: 'A4',
             printBackground: true,
-            margin: {
-                top: '0px',
-                right: '0px',
-                bottom: '0px',
-                left: '0px',
-            },
             preferCSSPageSize: true,
+            margin: { top: 0, right: 0, bottom: 0, left: 0 }
         });
 
         await browser.close();
 
-        // Return the PDF
-        return new NextResponse(Buffer.from(pdfBuffer), {
+        return new NextResponse(Buffer.from(pdf), {
             headers: {
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': 'attachment; filename="CV.pdf"',
-            },
+                'Content-Disposition': 'attachment; filename="CV.pdf"'
+            }
         });
 
     } catch (error: any) {
-        console.error('PDF Generation Error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Failed to generate PDF' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
