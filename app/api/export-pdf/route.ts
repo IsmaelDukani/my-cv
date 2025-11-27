@@ -13,12 +13,29 @@ export async function POST(req: Request) {
             );
         }
 
-        // Launch the browser with serverless Chrome for Vercel
-        const browser = await puppeteer.launch({
-            args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'],
-            executablePath: await chromium.executablePath(),
-            headless: true,
-        });
+        // Detect if we're in production (Vercel) or development (local)
+        const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+
+        // Launch the browser with appropriate configuration
+        const browser = await puppeteer.launch(
+            isProduction
+                ? {
+                    // Production (Vercel): Use serverless Chrome
+                    args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'],
+                    executablePath: await chromium.executablePath(),
+                    headless: true,
+                }
+                : {
+                    // Development (Local): Use local Chrome/Chromium
+                    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+                    executablePath: process.platform === 'win32'
+                        ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+                        : process.platform === 'darwin'
+                            ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+                            : '/usr/bin/google-chrome',
+                    headless: true,
+                }
+        );
 
         const page = await browser.newPage();
 
@@ -51,15 +68,6 @@ export async function POST(req: Request) {
                         padding: 0 !important;
                         box-sizing: border-box !important;
                         display: block !important;
-                        
-                        /* Remove all shadows and backgrounds from parent containers */
-                        box-shadow: none !important;
-                        background: white !important;
-                    }
-                    
-                    /* Remove shadows from all child elements to prevent artifacts */
-                    #cv-wrapper * {
-                        box-shadow: none !important;
                     }
                     
                     /* Fix blue text-chips wrapping issue */
