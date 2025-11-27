@@ -95,8 +95,20 @@ export async function POST(req: Request) {
         `;
 
         await page.setContent(fullHtml, {
-            waitUntil: 'networkidle0', // Wait for resources to load
+            waitUntil: ['networkidle0', 'load'], // Wait for all resources including stylesheets
         });
+
+        // Wait for stylesheets to be fully applied (important for Tailwind CSS)
+        await page.waitForFunction(() => {
+            const links = document.querySelectorAll('link[rel="stylesheet"]');
+            return Array.from(links).every(link => (link as HTMLLinkElement).sheet !== null);
+        }, { timeout: 10000 }).catch(() => {
+            // Continue even if timeout - some stylesheets might not load
+            console.log('Stylesheet wait timeout - continuing anyway');
+        });
+
+        // Additional small delay to ensure styles are applied
+        await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 500)));
 
         // Generate PDF
         const pdfBuffer = await page.pdf({
