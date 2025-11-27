@@ -39,18 +39,35 @@ export async function POST(req: Request) {
 
         const page = await browser.newPage();
 
-        // Construct stylesheet links
-        const linkTags = links.map((href: string) => `<link rel="stylesheet" href="${href}" />`).join('\n');
+        // Fetch and inline external stylesheets for PDF generation
+        let inlinedCss = css; // Start with inline styles
 
-        // Set the content
+        // Fetch each external stylesheet and add to inlined CSS
+        for (const href of links) {
+            try {
+                console.log(`Fetching stylesheet: ${href}`);
+                const response = await fetch(href);
+                if (response.ok) {
+                    const stylesheetContent = await response.text();
+                    inlinedCss += `\n/* Inlined from: ${href} */\n${stylesheetContent}\n`;
+                    console.log(`Successfully inlined stylesheet: ${href}`);
+                } else {
+                    console.warn(`Failed to fetch stylesheet: ${href} (${response.status})`);
+                }
+            } catch (error) {
+                console.error(`Error fetching stylesheet ${href}:`, error);
+            }
+        }
+
+        // Set the content with all CSS inlined
         const fullHtml = `
             <!DOCTYPE html>
             <html>
             <head>
+                <meta charset="UTF-8">
                 <base href="${baseUrl || ''}/" />
-                ${linkTags}
                 <style>
-                    ${css}
+                    ${inlinedCss}
                     
                     /* Global styles */
                     html, body {
@@ -95,19 +112,10 @@ export async function POST(req: Request) {
         `;
 
         await page.setContent(fullHtml, {
-            waitUntil: ['networkidle0', 'load'], // Wait for all resources including stylesheets
+            waitUntil: ['networkidle0', 'load'],
         });
 
-        // Wait for stylesheets to be fully applied (important for Tailwind CSS)
-        await page.waitForFunction(() => {
-            const links = document.querySelectorAll('link[rel="stylesheet"]');
-            return Array.from(links).every(link => (link as HTMLLinkElement).sheet !== null);
-        }, { timeout: 10000 }).catch(() => {
-            // Continue even if timeout - some stylesheets might not load
-            console.log('Stylesheet wait timeout - continuing anyway');
-        });
-
-        // Additional small delay to ensure styles are applied
+        // Small delay to ensure styles are applied
         await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 500)));
 
         // Generate PDF
@@ -120,7 +128,7 @@ export async function POST(req: Request) {
                 bottom: '0px',
                 left: '0px',
             },
-            preferCSSPageSize: true, // Respect @page size
+            preferCSSPageSize: true,
         });
 
         await browser.close();
