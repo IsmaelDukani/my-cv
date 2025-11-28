@@ -8,10 +8,21 @@ export async function exportToPDF(elementId: string, filename: string = 'CV.pdf'
             throw new Error(`Element with ID "${elementId}" not found`);
         }
 
-        // Get ONLY the inner CV HTML, not the preview wrapper
-        // Look for the actual CV content inside the printable element
-        const cvContent = element.querySelector('.bg-white, [class*="bg-"]') || element;
-        const html = cvContent.innerHTML;
+        // Select ONLY the main CV root element, not the preview wrapper
+        const root = element.querySelector('#cv-root') ||
+            element.querySelector('.resume-template-wrapper') ||
+            element.querySelector('[class*="bg-"]') ||
+            element.querySelector('div');
+
+        if (!root) {
+            throw new Error('CV root element not found');
+        }
+
+        // Use outerHTML to include the container + children
+        const html = root.outerHTML;
+
+        console.log('[PDF Export] Captured HTML length:', html.length);
+        console.log('[PDF Export] HTML preview:', html.substring(0, 200));
 
         // Collect CSS from style tags
         let css = '';
