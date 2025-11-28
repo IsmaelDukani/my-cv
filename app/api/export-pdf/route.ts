@@ -2,144 +2,144 @@ import { NextResponse } from 'next/server';
 import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
+type RequestBody = {
+    html: string;
+    css?: string;
+    links?: string[]; // absolute or relative to baseUrl
+    baseUrl?: string;
+    filename?: string;
+};
+
+const DEFAULT_TIMEOUT = 30_000; // ms
+
+async function fetchWithTimeout(url: string, timeout = DEFAULT_TIMEOUT) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(id);
+        if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+        return await res.text();
+    } finally {
+        clearTimeout(id);
+    }
+}
+
+async function inlineStyles(links: string[], baseUrl: string) {
+    let inlined = '';
+    if (!links || links.length === 0) return inlined;
+
+    const promises = links.map(async (href) => {
+        try {
+            const absolute = href.startsWith('http') ? href : `${baseUrl.replace(/\/$/, '')}/${href.replace(/^\//, '')}`;
+            const text = await fetchWithTimeout(absolute);
+            return `/* Inlined from: ${absolute} */\n${text}\n`;
+        } catch (err: any) {
+            console.warn('[PDF Export] Warning: could not inline', href, err?.message || err);
+            return `/* SKIPPED: ${href} - ${err?.message || 'error'} */\n`;
+        }
+    });
+
+    const results = await Promise.all(promises);
+    return results.join('\n');
+}
+
 export async function POST(req: Request) {
     try {
-        const { html, css = '', links = [], baseUrl = '' } = await req.json();
+        const body = (await req.json()) as RequestBody;
+        const { html, css = '', links = [], baseUrl = '', filename = 'document.pdf' } = body || {};
 
-        console.log('[PDF Export] Received request');
-        console.log('[PDF Export] HTML length:', html?.length || 0);
-        console.log('[PDF Export] HTML preview:', html?.substring(0, 200) || 'EMPTY');
-
+        console.log('[PDF Export] Request received — html length:', html?.length ?? 0);
         if (!html) return NextResponse.json({ error: 'HTML required' }, { status: 400 });
 
-        // Detect if we're in production (Vercel) or development (local)
-        const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+        // Inline external styles (gracefully skip failures)
+        const inlinedFromLinks = await inlineStyles(links, baseUrl || '');
+        const inlinedCss = `${css || ''}\n${inlinedFromLinks}`;
 
-        console.log('[PDF Export] Environment:', isProduction ? 'Production (Vercel)' : 'Development (Local)');
+        const finalHtml = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<base href="${(baseUrl || '').replace(/\/$/, '') + (baseUrl ? '/' : '')}" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+${inlinedCss}
 
-        const browser = await puppeteer.launch(
-            isProduction
-                ? {
-                    // Production (Vercel): Use serverless Chrome
-                    args: chromium.args,
-                    executablePath: await chromium.executablePath(),
-                    headless: true,
-                }
-                : {
-                    // Development (Local): Use local Chrome
-                    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-                    executablePath: process.platform === 'win32'
-                        ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-                        : process.platform === 'darwin'
-                            ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-                            : '/usr/bin/google-chrome',
-                    headless: true,
-                }
-        );
+html, body { margin: 0; padding: 0; background: #fff; }
+#cv-wrapper { box-sizing: border-box; }
+@media print { @page { size: A4; margin: 0; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+<div id="cv-wrapper">${html}</div>
+</body>
+</html>`;
 
+        // Detect environment (Vercel serverless recommended flow)
+        const isVercel = !!process.env.VERCEL;
+
+        const launchOptions: any = isVercel
+            ? {
+                args: chromium.args,
+                executablePath: await chromium.executablePath(),
+                headless: true,
+                ignoreHTTPSErrors: true,
+            }
+            : {
+                args: [
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-gpu",
+                ],
+                executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+                headless: true,
+                ignoreHTTPSErrors: true,
+            };
+
+        const browser = await puppeteer.launch(launchOptions);
         const page = await browser.newPage();
 
-        // Fetch and inline external stylesheets (including Tailwind CSS)
-        let inlinedCss = css;
+        // Set a reasonable viewport for A4
+        await page.setViewport({ width: 1200, height: 1600 });
 
-        console.log('[PDF Export] Fetching', links.length, 'stylesheets...');
+        // Use setContent to avoid filesystem usage in serverless environments
+        await page.setContent(finalHtml, { waitUntil: ['domcontentloaded', 'networkidle0'] });
 
-        for (const href of links) {
-            try {
-                const absoluteUrl = href.startsWith('http') ? href : `${baseUrl}${href}`;
-                console.log('[PDF Export] Fetching:', absoluteUrl);
-
-                const response = await fetch(absoluteUrl);
-                if (response.ok) {
-                    const stylesheetContent = await response.text();
-                    inlinedCss += `\n/* Inlined from: ${absoluteUrl} */\n${stylesheetContent}\n`;
-                    console.log('[PDF Export] ✓ Inlined:', absoluteUrl, `(${stylesheetContent.length} bytes)`);
-                } else {
-                    console.error('[PDF Export] ✗ Failed to fetch:', absoluteUrl, response.status);
-                }
-            } catch (error) {
-                console.error('[PDF Export] ✗ Error fetching:', href, error);
-            }
+        // Wait for fonts to be loaded
+        try {
+            await page.evaluateHandle('document.fonts.ready');
+        } catch (e: any) {
+            console.warn('[PDF Export] document.fonts.ready failed:', e?.message || e);
         }
 
-        console.log('[PDF Export] Total CSS size:', inlinedCss.length, 'bytes');
+        // Small additional wait to ensure styles and webfonts are applied
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-        const finalHtml = `
-      <!doctype html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <base href="${baseUrl}/" />
-        <style>
-          ${inlinedCss}
+        // Debugging helper: print content length to logs (helpful when blank PDF occurs)
+        try {
+            const rendered = await page.content();
+            console.log('[PDF Export] Rendered page content length:', rendered.length);
+        } catch (e: any) {
+            console.warn('[PDF Export] Could not read page.content()', e?.message || e);
+        }
 
-          html, body {
-            margin: 0;
-            padding: 0;
-            background: #ffffff;
-          }
-
-          /* A4 wrapper */
-          #cv-wrapper {
-            width: 210mm !important;
-            min-height: 297mm !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            box-sizing: border-box !important;
-            background: white !important;
-            box-shadow: none !important;
-            border-radius: 0 !important;
-          }
-
-          /* Remove preview UI */
-          .preview-wrapper, .card, .live-preview, .container, .preview-card {
-            all: unset !important;
-            display: block !important;
-          }
-
-          /* Prevent chip/tag wrapping */
-          .chip, .tag, .badge {
-            white-space: nowrap !important;
-            display: inline-block !important;
-          }
-
-          @media print {
-            @page { size: A4; margin: 0; }
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          }
-        </style>
-      </head>
-      <body>
-        <div id="cv-wrapper">${html}</div>
-      </body>
-      </html>
-    `;
-
-        console.log('[PDF Export] Final HTML length:', finalHtml.length);
-
-        await page.setContent(finalHtml, { waitUntil: 'networkidle0' });
-        await page.evaluateHandle('document.fonts.ready');
-
-        const pdf = await page.pdf({
+        const pdfBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
             preferCSSPageSize: true,
-            margin: { top: 0, right: 0, bottom: 0, left: 0 }
+            margin: { top: 0, right: 0, bottom: 0, left: 0 },
         });
 
         await browser.close();
 
-        console.log('[PDF Export] PDF generated successfully');
-
-        return new NextResponse(Buffer.from(pdf), {
+        return new NextResponse(Buffer.from(pdfBuffer), {
             headers: {
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': 'attachment; filename="CV.pdf"'
-            }
+                'Content-Disposition': `attachment; filename="${filename.replace(/[^a-zA-Z0-9_.-]/g, '_')}"`,
+            },
         });
-
-    } catch (error: any) {
-        console.error('[PDF Export] Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (err: any) {
+        console.error('[PDF Export] Error:', err?.stack || err?.message || err);
+        return NextResponse.json({ error: err?.message || String(err) }, { status: 500 });
     }
 }
