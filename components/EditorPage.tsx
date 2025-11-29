@@ -16,6 +16,7 @@ import { ContentEditor } from './ContentEditor';
 import { CVService } from '../services/CVService';
 import { useTheme } from '../components/ThemeContext';
 import { ThemeLanguageControls } from './ThemeLanguageControls';
+import ExportPDFButton from './ExportPDFButton';
 
 interface EditorPageProps {
   initialData: CVData;
@@ -148,14 +149,7 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
             <span className="hidden lg:inline">{saving ? t('saving') : t('save')}</span>
           </button>
 
-          <button
-            onClick={handleExport}
-            disabled={exporting}
-            className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download className="w-4 h-4" />
-            <span className="hidden lg:inline">{exporting ? 'Exporting...' : t('export')}</span>
-          </button>
+          <ExportPDFButton />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -264,7 +258,9 @@ export function EditorPage({ initialData, accessToken, user, onSignOut, onViewAc
 
           <div className="flex justify-center">
             <div className="transform scale-[0.7] origin-top">
-              <LivePreview data={data} template={template} />
+              <div id="cv-preview-original">
+                <LivePreview data={data} template={template} />
+              </div>
             </div>
           </div>
         </div>
