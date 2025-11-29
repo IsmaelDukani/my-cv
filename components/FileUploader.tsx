@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Upload, FileText, AlertCircle } from 'lucide-react';
 import { CVData } from './OnboardingFlow';
 import { useTheme } from '../components/ThemeContext';
-import { parseCV } from '@/utils/cvParser';
+import { parseCV } from '@/utils/pdfImport';
 
 interface FileUploaderProps {
   onComplete: (data: CVData) => void;

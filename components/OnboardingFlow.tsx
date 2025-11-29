@@ -6,39 +6,8 @@ import { CVFormManual } from '../components/CVFormManual';
 import { FileUploader } from '../components/FileUploader';
 import { useTheme } from '../components/ThemeContext';
 
-export interface CVData {
-  personalInfo: {
-    name: string;
-    email: string;
-    phone: string;
-    location: string;
-    title: string;
-    summary: string;
-    photoUrl?: string;
-    linkedin?: string;
-    github?: string;
-  };
-  experiences: Array<{
-    id: string;
-    company: string;
-    position: string;
-    location: string;
-    startDate: string;
-    endDate: string;
-    current: boolean;
-    bullets: string[];
-  }>;
-  education: Array<{
-    id: string;
-    institution: string;
-    degree: string;
-    field: string;
-    startDate: string;
-    endDate: string;
-    gpa?: string;
-  }>;
-  skills: string[];
-}
+export type CVData = CV;
+import { CV } from '@/types/cv';
 
 interface OnboardingFlowProps {
   onComplete: (data: CVData) => void;

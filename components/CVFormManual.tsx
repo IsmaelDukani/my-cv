@@ -41,7 +41,8 @@ export function CVFormManual({ onComplete, onBack }: CVFormManualProps) {
       endDate: '',
       gpa: ''
     }],
-    skills: []
+    skills: [],
+    languages: []
   });
 
   const [skillInput, setSkillInput] = useState('');
