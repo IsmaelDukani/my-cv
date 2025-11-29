@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Upload, FileText, AlertCircle } from 'lucide-react';
 import { CVData } from './OnboardingFlow';
 import { useTheme } from '../components/ThemeContext';
-import { parseCV } from '@/utils/pdfImport';
+import { parsePdf } from '@/utils/cvParser';
 
 interface FileUploaderProps {
   onComplete: (data: CVData) => void;
@@ -44,10 +44,15 @@ export function FileUploader({ onComplete, onBack }: FileUploaderProps) {
   };
 
   const handleFile = (file: File) => {
-    const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
+    const validTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'text/plain'
+    ];
 
     if (!validTypes.includes(file.type)) {
-      setError('Please upload a PDF or DOCX file');
+      setError('Please upload a PDF, DOCX, or TXT file');
       return;
     }
 
@@ -67,7 +72,7 @@ export function FileUploader({ onComplete, onBack }: FileUploaderProps) {
     setError('');
 
     try {
-      const data = await parseCV(file);
+      const data = await parsePdf(file);
       onComplete(data);
     } catch (err: any) {
       console.error('Upload error:', err);

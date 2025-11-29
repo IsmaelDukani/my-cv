@@ -1,5 +1,5 @@
-import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
-import mammoth from 'mammoth';
+'use client';
+
 import { CV, Education, Experience } from "@/types/cv";
 
 /**
@@ -13,34 +13,26 @@ import { CV, Education, Experience } from "@/types/cv";
  * SECURITY FIX:
  * - Updated from pdfjs-dist <=4.1.392 (vulnerable to arbitrary JS execution)
  * - Now using pdfjs-dist 5.4.394 (CVE GHSA-wgrm-67xf-hhpq fixed)
+ * 
+ * NOTE: This file uses 'use client' directive because pdfjs-dist requires browser APIs
+ * and cannot run on the server-side. Dynamic imports are used to avoid SSR issues.
  */
 
-// Set up the PDF.js worker with proper error handling
-if (typeof window !== 'undefined') {
-    GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
-}
+// Initialize PDF.js worker on client-side only
+let pdfWorkerInitialized = false;
 
-export async function parseCV(file: File): Promise<CV> {
-    if (file.type === 'application/pdf') {
-        return parsePdf(file);
-    } else if (
-        file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-        file.type === 'application/msword'
-    ) {
-        return parseDocx(file);
-    } else {
-        throw new Error('Unsupported file type');
+async function initializePdfWorker() {
+    if (pdfWorkerInitialized || typeof window === 'undefined') {
+        return;
     }
-}
 
-async function parseDocx(file: File): Promise<CV> {
     try {
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        return parseCvText(result.value);
+        // Dynamic import to ensure it only runs on the client
+        const { GlobalWorkerOptions } = await import('pdfjs-dist');
+        GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
+        pdfWorkerInitialized = true;
     } catch (error) {
-        console.error('Error parsing DOCX:', error);
-        return getDefaultCV();
+        console.error('Failed to initialize PDF worker:', error);
     }
 }
 
@@ -58,6 +50,12 @@ async function parseDocx(file: File): Promise<CV> {
  */
 export async function parsePdf(file: File): Promise<CV> {
     try {
+        // Initialize PDF worker before parsing
+        await initializePdfWorker();
+
+        // Dynamically import pdfjs-dist to avoid SSR issues
+        const { getDocument } = await import('pdfjs-dist');
+
         const arrayBuffer = await file.arrayBuffer();
 
         // In pdfjs-dist 5.4.394, getDocument() accepts ArrayBuffer directly
@@ -126,11 +124,11 @@ function parseCvText(text: string): CV {
         let currentSection = 'personalInfo';
 
         const sectionKeywords: { [key: string]: string[] } = {
-            summary: ['professional summary', 'summary', 'profile', 'objective', 'about'],
-            experience: ['work experience', 'experience', 'employment', 'history', 'career'],
-            education: ['education', 'academic', 'degree', 'university', 'college'],
-            skills: ['skills', 'abilities', 'competencies', 'technical skills'],
-            languages: ['languages', 'language proficiency']
+            summary: ['professional summary', 'summary', 'profile', 'objective', 'about', 'overview'],
+            experience: ['work experience', 'experience', 'employment', 'history', 'career', 'professional experience'],
+            education: ['education', 'academic', 'degree', 'university', 'college', 'qualification'],
+            skills: ['skills', 'abilities', 'competencies', 'technical skills', 'expertise'],
+            languages: ['languages', 'language proficiency', 'language skills']
         };
 
         for (const line of lines) {
@@ -304,7 +302,9 @@ function parseCvText(text: string): CV {
                     preDate.toLowerCase().includes('bachelor') ||
                     preDate.toLowerCase().includes('degree') ||
                     preDate.toLowerCase().includes('phd') ||
-                    preDate.toLowerCase().includes('diploma')) {
+                    preDate.toLowerCase().includes('diploma') ||
+                    preDate.toLowerCase().includes('associate') ||
+                    preDate.toLowerCase().includes('certification')) {
                     degree = preDate;
                 } else {
                     institution = preDate;
