@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 
+// Force Node.js runtime for Vercel (required for pdfjs-dist and Buffer)
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 /**
  * IMPORTANT:
  * - Install: npm install pdfjs-dist
