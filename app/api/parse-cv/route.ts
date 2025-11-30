@@ -638,6 +638,17 @@ function parseCvText(readableText: string) {
 /**
  * API Route Handler
  */
+
+// Diagnostic GET endpoint to verify route is deployed
+export async function GET() {
+    return NextResponse.json({
+        message: "parse-cv endpoint is working",
+        methods: ["GET", "POST"],
+        runtime: "nodejs",
+        timestamp: new Date().toISOString()
+    });
+}
+
 export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData();
