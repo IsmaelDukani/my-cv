@@ -5,7 +5,7 @@ const isPublicRoute = createRouteMatcher([
     '/',
     '/sign-in(.*)',
     '/sign-up(.*)',
-    '/api/process-cv(.*)',  // Exclude process-cv from Clerk middleware
+    '/api/parse-cv(.*)',  // Exclude parse-cv from Clerk middleware
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
