@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
-
-// Force Node.js runtime for Vercel (required for pdfjs-dist and Buffer)
+// Route segment config - MUST be at the very top
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
+
+import { NextRequest, NextResponse } from "next/server";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 
 /**
  * IMPORTANT:
