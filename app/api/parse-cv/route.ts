@@ -27,8 +27,9 @@ async function extractTextLayoutAware(buffer: Buffer): Promise<string> {
     const uint8Array = new Uint8Array(buffer);
     const pdf = await pdfjs.getDocument({
         data: uint8Array,
-        // Use standard font data to avoid font loading errors
-        standardFontDataUrl: "node_modules/pdfjs-dist/standard_fonts/"
+        // Use CDN for standard fonts to ensure they work in serverless environments (Vercel)
+        // where node_modules might not be at the expected path.
+        standardFontDataUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.449/standard_fonts/"
     }).promise;
 
     const pagesTextBlocks: Array<{ page: number; columns?: number; text: string }> = [];
