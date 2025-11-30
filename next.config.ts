@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['puppeteer'],
+  serverExternalPackages: ['puppeteer', 'pdfjs-dist'],
   webpack: (config) => {
     config.resolve.alias.canvas = false;
     return config;
