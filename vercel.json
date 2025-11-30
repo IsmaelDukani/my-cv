@@ -3,7 +3,7 @@
         "app/api/export-pdf/route.ts": {
             "maxDuration": 30
         },
-        "app/api/parse-cv/route.ts": {
+        "app/api/process-cv/route.ts": {
             "maxDuration": 30
         }
     }

@@ -45,7 +45,7 @@ export async function parsePdf(file: File): Promise<CV> {
         console.log(`Uploading file to server: ${file.name}`);
 
         // Send to server API
-        const response = await fetch('/api/parse-cv', {
+        const response = await fetch('/api/process-cv', {
             method: 'POST',
             body: formData,
         });
