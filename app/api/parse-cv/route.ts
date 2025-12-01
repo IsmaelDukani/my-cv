@@ -8,13 +8,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// Use pdf.js worker hosted on CDN (works in Vercel & localhost).
-// You may change this to a local or private worker path if preferred.
-const PDF_WORKER_URL =
-    process.env.NEXT_PUBLIC_PDF_WORKER ||
-    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.349/pdf.worker.min.js";
-
-pdfjs.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
+// Disable worker in Node.js runtime (Vercel-safe)
+if (typeof window === "undefined") {
+    // @ts-ignore
+    pdfjs.GlobalWorkerOptions.workerSrc = undefined;
+} else {
+    pdfjs.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.349/pdf.worker.min.js";
+}
 
 /**
  * Helper utilities
