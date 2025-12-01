@@ -11,7 +11,7 @@ export const maxDuration = 30;
 // Disable worker in Node.js runtime (Vercel-safe)
 if (typeof window === "undefined") {
     // @ts-ignore
-    pdfjs.GlobalWorkerOptions.workerSrc = undefined;
+    // pdfjs.GlobalWorkerOptions.workerSrc = undefined;
 } else {
     pdfjs.GlobalWorkerOptions.workerSrc =
         "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.349/pdf.worker.min.js";
