@@ -85,7 +85,7 @@ async function extractTextLayoutAware(buffer: Buffer) {
 
             const content = await page.getTextContent({
                 disableCombineTextItems: false,
-            });
+            } as any);
 
             type Item = { str: string; x: number; y: number; width?: number; height?: number };
 
