@@ -545,7 +545,8 @@ export async function POST(req: NextRequest) {
     }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+    console.log(`GET handler called for ${req.url}`);
     return NextResponse.json(
         { success: false, error: "Method not allowed. Please use POST with a file upload." },
         { status: 405 }
