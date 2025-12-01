@@ -544,3 +544,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: err?.message || String(err) }, { status: 500 });
     }
 }
+
+export async function GET() {
+    return NextResponse.json(
+        { success: false, error: "Method not allowed. Please use POST with a file upload." },
+        { status: 405 }
+    );
+}
