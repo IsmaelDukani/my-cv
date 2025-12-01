@@ -11,7 +11,7 @@ import { Loader2 } from 'lucide-react';
 function EditorContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const cvId = searchParams.get('id');
+    const cvId = searchParams?.get('id');
     const { user, isLoaded, isSignedIn } = useUser();
     const { signOut } = useClerk();
     const { getToken } = useAuth();

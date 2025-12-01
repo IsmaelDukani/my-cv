@@ -34,3 +34,10 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Environment Variables for CV Parser
+
+- `ENABLE_GEMINI_FALLBACK`: Set to `1` to enable Gemini fallback for parsing.
+- `GEMINI_ENDPOINT`: The endpoint URL for the Gemini/Antigravity agent.
+- `GEMINI_API_KEY`: Your API key for Gemini.
+- `NEXT_PUBLIC_PDF_WORKER`: (Optional) URL to the PDF.js worker script. Defaults to CDN.

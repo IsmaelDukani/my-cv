@@ -1,0 +1,54 @@
+{
+  "success": true,
+  "data": {
+    "personalInfo": {
+      "name": "John Doe",
+      "title": "",
+      "email": "john.doe@example.com",
+      "phone": "123-456-7890",
+      "linkedin": "",
+      "github": "",
+      "summary": "",
+      "headerLines": [
+        "John Doe",
+        "john.doe@example.com | 123-456-7890"
+      ]
+    },
+    "experiences": [
+      {
+        "id": "ymrldn0",
+        "position": "Software Engineer",
+        "company": "Tech Corp  • Developed web applications.",
+        "startDate": "Jan 2020",
+        "endDate": "Present",
+        "current": true,
+        "bullets": []
+      }
+    ],
+    "education": [],
+    "skills": [],
+    "languages": [],
+    "additional": [],
+    "rawLines": [
+      "John Doe",
+      "john.doe@example.com | 123-456-7890",
+      "Professional Summary",
+      "Experienced software engineer with a passion for AI.",
+      "Experience",
+      "Software Engineer - Tech Corp Jan 2020 - Present • Developed web applications.",
+      "Education",
+      "University of Technology Bachelor of Science in Computer Science 2016 - 2020"
+    ]
+  },
+  "debug": {
+    "pagesSummary": [
+      {
+        "page": 1,
+        "columns": 1,
+        "rows": 12
+      }
+    ],
+    "needFallback": true,
+    "fallbackResult": null
+  }
+}
