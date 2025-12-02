@@ -86,7 +86,7 @@ async function extractLayoutText(buffer: Buffer) {
 
         const content = await page.getTextContent({ disableCombineTextItems: false } as any);
 
-        const items: any[] = [];
+        const items: { str: string; x: number; y: number; height: number }[] = [];
         for (const it of content.items as any[]) {
             const t = it.transform || [1, 0, 0, 1, 0, 0];
             const raw = String(it.str || "").replace(/\s+/g, " ").trim();
@@ -108,7 +108,7 @@ async function extractLayoutText(buffer: Buffer) {
         const median = heights[Math.floor(heights.length / 2)] || 12;
         const tolerance = Math.max(3, Math.round(median * 0.6));
 
-        const rows: any[] = [];
+        const rows: { y: number; items: typeof items }[] = [];
         const byY = items.slice().sort((a, b) => a.y - b.y);
 
         for (const it of byY) {
