@@ -5,6 +5,9 @@
         },
         "app/api/process-cv/route.ts": {
             "maxDuration": 30
+        },
+        "app/api/parse-cv/route.ts": {
+            "maxDuration": 30
         }
     }
 }

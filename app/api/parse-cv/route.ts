@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Configure runtime for Vercel serverless functions
+export const runtime = 'nodejs';
+export const maxDuration = 30; // Allow up to 30 seconds for PDF processing
+
 // Dynamic import for pdfjs-dist to ensure it's loaded correctly in the serverless environment
 let pdfjsLib: any = null;
 
