@@ -3,15 +3,95 @@
 import { CV } from "@/types/cv";
 
 /**
- * CLIENT-SIDE CV PARSER UTILITY
+ * CLIENT-SIDE CV PARSER UTILITY - VERCEL + PDFJS-DIST COMPATIBLE
  * 
  * This module provides a client-side interface to the server-side CV parsing API.
- * It handles:
- * - File upload to the server
- * - API communication
- * - Error handling and user feedback
- * - Data validation
+ * It is designed to work with the /api/parse-cv endpoint.
  */
+
+/**
+ * Get a default CV structure when parsing fails
+ */
+function getDefaultCV(): CV {
+    return {
+        personalInfo: {
+            name: 'Unable to parse CV',
+            email: '',
+            phone: '',
+            location: '',
+            title: 'Please try uploading a different PDF',
+            summary: 'The CV could not be parsed. Please ensure it is a valid PDF file.',
+            linkedin: '',
+            github: ''
+        },
+        experiences: [],
+        education: [],
+        skills: [],
+        languages: []
+    };
+}
+
+/**
+ * Normalize and validate CV data
+ * @param data - Raw CV data from server
+ * @returns CV - Normalized CV data
+ */
+function normalizeCV(data: any): CV {
+    try {
+        if (!data) {
+            return getDefaultCV();
+        }
+
+        const personalInfo = data.personalInfo || {};
+        const experiences = Array.isArray(data.experiences) ? data.experiences : [];
+        const education = Array.isArray(data.education) ? data.education : [];
+        const skills = Array.isArray(data.skills) ? data.skills : [];
+        const languages = Array.isArray(data.languages) ? data.languages : [];
+
+        // Normalize experiences
+        const normalizedExperiences = experiences.map((exp: any) => ({
+            id: exp.id || Math.random().toString(36).substr(2, 9),
+            company: exp.company || '',
+            position: exp.position || '',
+            location: exp.location || '',
+            startDate: exp.startDate || '',
+            endDate: exp.endDate || '',
+            current: exp.current || false,
+            bullets: Array.isArray(exp.bullets) ? exp.bullets : []
+        }));
+
+        // Normalize education
+        const normalizedEducation = education.map((edu: any) => ({
+            id: edu.id || Math.random().toString(36).substr(2, 9),
+            institution: edu.institution || '',
+            degree: edu.degree || '',
+            field: edu.field || '',
+            startDate: edu.startDate || '',
+            endDate: edu.endDate || '',
+            gpa: edu.gpa || ''
+        }));
+
+        return {
+            personalInfo: {
+                name: personalInfo.name || 'Your Name',
+                email: personalInfo.email || '',
+                phone: personalInfo.phone || '',
+                location: personalInfo.location || '',
+                title: personalInfo.title || '',
+                summary: personalInfo.summary || '',
+                linkedin: personalInfo.linkedin || '',
+                github: personalInfo.github || ''
+            },
+            experiences: normalizedExperiences,
+            education: normalizedEducation,
+            skills: skills.filter((s: any) => typeof s === 'string' && s.length > 0),
+            languages: languages.filter((l: any) => typeof l === 'string' && l.length > 0)
+        };
+    } catch (error) {
+        console.error('Error normalizing CV:', error);
+        return getDefaultCV();
+    }
+}
 
 /**
  * Parse a CV file by uploading it to the server
@@ -53,7 +133,14 @@ export async function parsePdf(file: File): Promise<CV> {
         console.log(`Server response status: ${response.status}`);
 
         if (!response.ok) {
-            const errorData = await response.json();
+            let errorData;
+            try {
+                errorData = await response.json();
+            } catch {
+                // The 405 error is likely due to a missing dependency on Vercel.
+                throw new Error(`Server returned status ${response.status}. CRITICAL: Did you run 'npm install pdfjs-dist' and restart the server?`);
+            }
+
             const errorMessage = errorData.message || errorData.error || 'Failed to parse CV';
             throw new Error(errorMessage);
         }
@@ -77,88 +164,4 @@ export async function parsePdf(file: File): Promise<CV> {
         // Return default CV on error
         return getDefaultCV();
     }
-}
-
-/**
- * Normalize and validate CV data
- * @param data - Raw CV data from server
- * @returns CV - Normalized CV data
- */
-function normalizeCV(data: any): CV {
-    try {
-        if (!data) {
-            return getDefaultCV();
-        }
-
-        const personalInfo = data.personalInfo || {};
-        const experiences = Array.isArray(data.experiences) ? data.experiences : [];
-        const education = Array.isArray(data.education) ? data.education : [];
-        const skills = Array.isArray(data.skills) ? data.skills : [];
-        const languages = Array.isArray(data.languages) ? data.languages : [];
-
-        // Normalize experiences
-        const normalizedExperiences = experiences.map((exp: any) => ({
-            id: exp.id || crypto.randomUUID(),
-            company: exp.company || '',
-            position: exp.position || '',
-            location: exp.location || '',
-            startDate: exp.startDate || '',
-            endDate: exp.endDate || '',
-            current: exp.current || false,
-            bullets: Array.isArray(exp.bullets) ? exp.bullets : []
-        }));
-
-        // Normalize education
-        const normalizedEducation = education.map((edu: any) => ({
-            id: edu.id || crypto.randomUUID(),
-            institution: edu.institution || '',
-            degree: edu.degree || '',
-            field: edu.field || '',
-            startDate: edu.startDate || '',
-            endDate: edu.endDate || '',
-            gpa: edu.gpa || ''
-        }));
-
-        return {
-            personalInfo: {
-                name: personalInfo.name || 'Your Name',
-                email: personalInfo.email || '',
-                phone: personalInfo.phone || '',
-                location: personalInfo.location || '',
-                title: personalInfo.title || '',
-                summary: personalInfo.summary || '',
-                linkedin: personalInfo.linkedin || '',
-                github: personalInfo.github || ''
-            },
-            experiences: normalizedExperiences,
-            education: normalizedEducation,
-            skills: skills.filter((s: any) => typeof s === 'string' && s.length > 0),
-            languages: languages.filter((l: any) => typeof l === 'string' && l.length > 0)
-        };
-    } catch (error) {
-        console.error('Error normalizing CV:', error);
-        return getDefaultCV();
-    }
-}
-
-/**
- * Get a default CV structure when parsing fails
- */
-function getDefaultCV(): CV {
-    return {
-        personalInfo: {
-            name: 'Unable to parse CV',
-            email: '',
-            phone: '',
-            location: '',
-            title: 'Please try uploading a different PDF',
-            summary: 'The CV could not be parsed. Please ensure it is a valid PDF file.',
-            linkedin: '',
-            github: ''
-        },
-        experiences: [],
-        education: [],
-        skills: [],
-        languages: []
-    };
 }
