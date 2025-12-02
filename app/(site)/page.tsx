@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-import { HomePage } from '../components/HomePage';
-import { OnboardingFlow, CVData } from '../components/OnboardingFlow';
+import { HomePage } from '../../components/HomePage';
+import { OnboardingFlow, CVData } from '../../components/OnboardingFlow';
 import { Loader2 } from 'lucide-react';
 
 export default function Page() {
