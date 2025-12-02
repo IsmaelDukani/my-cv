@@ -114,7 +114,7 @@ export const CVService = {
             const headers: HeadersInit = { 'Content-Type': 'application/json' };
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            const response = await fetch('/api/user/sync', {
+            const response = await fetch('/api/user-sync', {
                 method: 'POST',
                 headers,
             });
