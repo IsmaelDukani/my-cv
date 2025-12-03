@@ -48,6 +48,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/formidable": "^3.4.6",
     "@types/node": "^24.10.1",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

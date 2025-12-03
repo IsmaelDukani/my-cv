@@ -1,70 +1,71 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+const pdfParse = require("pdf-parse");
 
-// Configure runtime for Vercel serverless functions
-export const runtime = 'nodejs';
-export const maxDuration = 30; // Allow up to 30 seconds for PDF processing
+export const runtime = "nodejs";
+export const maxDuration = 30;
 
-// Dynamic import for pdfjs-dist to ensure it's loaded correctly in the serverless environment
-let pdfjsLib: any = null;
-
-async function getPdfjsLib() {
-    if (!pdfjsLib) {
-        try {
-            // Import the Node.js compatible version of pdfjs-dist
-            pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-
-            // Set the worker source to null for server-side processing
-            pdfjsLib.GlobalWorkerOptions.workerSrc = null;
-        } catch (error) {
-            console.error('Failed to load pdfjs-dist:', error);
-            throw new Error('PDF.js library not available. Please ensure it is installed: npm install pdfjs-dist');
-        }
-    }
-    return pdfjsLib;
-}
-
-/**
- * Extract text from PDF buffer using pdfjs-dist
- */
-async function extractTextFromPdf(buffer: Buffer): Promise<string> {
+export async function POST(request: NextRequest) {
     try {
-        const { getDocument } = await getPdfjsLib();
+        console.log("Received CV parsing request");
 
-        // The buffer needs to be converted to a Uint8Array for pdfjs-dist
-        const uint8Array = new Uint8Array(buffer);
+        const formData = await request.formData();
+        const file = formData.get("file") as File;
 
-        const pdf = await getDocument({
-            data: uint8Array,
-            useWorkerFetch: false, // Important for server-side
-        }).promise;
-
-        let fullText = '';
-
-        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-            const page = await pdf.getPage(pageNum);
-            const textContent = await page.getTextContent();
-
-            // Join text items with a space
-            const pageText = textContent.items.map((item: any) => item.str).join(' ');
-            fullText += pageText + '\n';
+        if (!file) {
+            return NextResponse.json(
+                { error: "No file provided" },
+                { status: 400 }
+            );
         }
 
-        if (!fullText || fullText.trim().length === 0) {
-            throw new Error('No text content extracted from PDF');
+        console.log(`Processing file: ${file.name}, size: ${file.size}`);
+
+        if (!file.name.toLowerCase().endsWith(".pdf")) {
+            return NextResponse.json(
+                { error: "Only PDF files are supported" },
+                { status: 400 }
+            );
         }
 
-        console.log(`Successfully extracted ${fullText.length} characters from PDF`);
-        return fullText;
-    } catch (error) {
-        console.error('Error extracting text from PDF:', error);
-        throw error;
+        // Convert File → Buffer
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        console.log("Extracting text...");
+        const result = await pdfParse(buffer);
+
+        const extractedText = result.text;
+        if (!extractedText || extractedText.trim().length === 0) {
+            throw new Error("No text was extracted from the PDF");
+        }
+
+        console.log(
+            `Successfully extracted ${extractedText.length} characters`
+        );
+
+        // ---- Your custom text parser still works ----
+        const cvData = parseCvText(extractedText);
+
+        return NextResponse.json(
+            { success: true, data: cvData },
+            { status: 200 }
+        );
+    } catch (error: any) {
+        console.error("CV parsing failed:", error);
+
+        return NextResponse.json(
+            {
+                success: false,
+                error: error.message || "Failed to parse CV",
+            },
+            { status: 500 }
+        );
     }
 }
 
-/**
- * Parse CV text and extract structured data
- */
-function parseCvText(text: string): any {
+// ----------------------------------------------------
+// Keep your existing parser exactly as it is:
+function parseCvText(text: string) {
     try {
         const lines = text
             .split('\n')
@@ -150,51 +151,3 @@ function parseCvText(text: string): any {
     }
 }
 
-/**
- * POST handler for CV parsing
- */
-export async function POST(request: NextRequest) {
-    try {
-        console.log('Received CV parsing request');
-
-        const formData = await request.formData();
-        const file = formData.get('file') as File;
-
-        if (!file) {
-            return NextResponse.json({ error: 'No file provided' }, { status: 400 });
-        }
-
-        console.log(`Processing file: ${file.name}, size: ${file.size} bytes`);
-
-        const fileName = file.name.toLowerCase();
-        if (!fileName.endsWith('.pdf')) {
-            return NextResponse.json({ error: 'Only PDF files are supported' }, { status: 400 });
-        }
-
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        console.log('Extracting text from PDF...');
-        const extractedText = await extractTextFromPdf(buffer);
-
-        console.log('Parsing CV data...');
-        const cvData = parseCvText(extractedText);
-
-        console.log('CV parsing completed successfully');
-
-        return NextResponse.json({ success: true, data: cvData }, { status: 200 });
-    } catch (error) {
-        console.error('Error in CV parsing endpoint:', error);
-
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-
-        return NextResponse.json(
-            {
-                success: false,
-                error: errorMessage,
-                message: 'Failed to parse CV. Please ensure the file is a valid PDF and that "pdfjs-dist" is installed.',
-            },
-            { status: 500 }
-        );
-    }
-}
