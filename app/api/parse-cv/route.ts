@@ -1,153 +1,121 @@
 import { NextRequest, NextResponse } from "next/server";
-const pdfParse = require("pdf-parse");
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
-export async function POST(request: NextRequest) {
+async function callAIExtractor(pdfBuffer: Buffer) {
+    const endpoint = process.env.GEMINI_ENDPOINT;
+    const key = process.env.GOOGLE_AI_API_KEY;
+
+    if (!endpoint || !key) return { error: "Missing API credentials" };
+
+    const base64Data = pdfBuffer.toString("base64");
+
+    // UPDATED PROMPT
+    const prompt = `
+    You are an expert CV parser.
+    Analyze the attached PDF resume and extract the data into JSON.
+    
+    CRITICAL INSTRUCTIONS:
+    1. **Professional Title**: Look specifically at the top of the document (header), usually below or next to the Name, for a Professional Title (e.g., "Logistics Representative", "Full Stack Developer"). Map this to "jobTitle".
+    2. **Education Formatting**: 
+       - Merge lines to form the complete Degree name.
+       - **REMOVE** isolated words like "in", "at", or "of" if they appear on their own line due to PDF formatting.
+       - Example: "Master's Degree [newline] in [newline] Business" -> "Master's Degree in Business".
+       - Do not leave "in" as a dangling part of the date or location.
+    3. **Dates**: Normalize all dates to "YYYY-MM" or "Present".
+    4. **Summary**: If the text is fragmented, reconstruct it into coherent sentences.
+
+    Return ONLY valid JSON matching this schema:
+    {
+      "personalInfo": { 
+        "name": "", 
+        "jobTitle": "", 
+        "email": "", 
+        "phone": "", 
+        "linkedin": "", 
+        "github": "", 
+        "summary": "" 
+      },
+      "experiences": [ 
+        { 
+          "company": "", 
+          "position": "", 
+          "startDate": "", 
+          "endDate": "", 
+          "location": "", 
+          "bullets": [] 
+        } 
+      ],
+      "education": [ 
+        { 
+          "institution": "", 
+          "degree": "", 
+          "startDate": "", 
+          "endDate": "", 
+          "location": "" 
+        } 
+      ],
+      "skills": [],
+      "languages": []
+    }
+    `;
+
+    const payload = {
+        contents: [{
+            parts: [
+                { text: prompt },
+                {
+                    inline_data: {
+                        mime_type: "application/pdf",
+                        data: base64Data
+                    }
+                }
+            ]
+        }]
+    };
+
     try {
-        console.log("Received CV parsing request");
+        const res = await fetch(`${endpoint}?key=${key}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
 
-        const formData = await request.formData();
-        const file = formData.get("file") as File;
+        const text = await res.text();
 
-        if (!file) {
-            return NextResponse.json(
-                { error: "No file provided" },
-                { status: 400 }
-            );
+        if (!res.ok) {
+            console.error("Gemini API Error:", res.status, text);
+            return { error: `Gemini Error: ${res.status}`, details: text };
         }
 
-        console.log(`Processing file: ${file.name}, size: ${file.size}`);
+        const responseJson = JSON.parse(text);
+        const candidate = responseJson.candidates?.[0]?.content?.parts?.[0]?.text;
 
-        if (!file.name.toLowerCase().endsWith(".pdf")) {
-            return NextResponse.json(
-                { error: "Only PDF files are supported" },
-                { status: 400 }
-            );
-        }
+        if (!candidate) throw new Error("No content generated");
 
-        // Convert File → Buffer
+        const cleanJson = candidate.replace(/```json/g, "").replace(/```/g, "").trim();
+        return JSON.parse(cleanJson);
+
+    } catch (e: any) {
+        return { error: "Parsing failed", details: e.message };
+    }
+}
+
+export async function POST(req: NextRequest) {
+    try {
+        const form = await req.formData();
+        const file = form.get("file") as File | null;
+        if (!file) return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
+
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        console.log("Extracting text...");
-        const result = await pdfParse(buffer);
+        const data = await callAIExtractor(buffer);
 
-        const extractedText = result.text;
-        if (!extractedText || extractedText.trim().length === 0) {
-            throw new Error("No text was extracted from the PDF");
-        }
-
-        console.log(
-            `Successfully extracted ${extractedText.length} characters`
-        );
-
-        // ---- Your custom text parser still works ----
-        const cvData = parseCvText(extractedText);
-
-        return NextResponse.json(
-            { success: true, data: cvData },
-            { status: 200 }
-        );
-    } catch (error: any) {
-        console.error("CV parsing failed:", error);
-
-        return NextResponse.json(
-            {
-                success: false,
-                error: error.message || "Failed to parse CV",
-            },
-            { status: 500 }
-        );
+        return NextResponse.json({ success: true, data }, { status: 200 });
+    } catch (err: any) {
+        return NextResponse.json({ success: false, error: err.message }, { status: 500 });
     }
 }
-
-// ----------------------------------------------------
-// Keep your existing parser exactly as it is:
-function parseCvText(text: string) {
-    try {
-        const lines = text
-            .split('\n')
-            .map((line) => line.trim())
-            .filter((line) => line && line.length > 0);
-
-        if (lines.length === 0) {
-            throw new Error('No text lines extracted');
-        }
-
-        // Section splitting logic
-        const sections: { [key: string]: string[] } = {
-            personalInfo: [],
-            summary: [],
-            experience: [],
-            education: [],
-            skills: [],
-            languages: [],
-            other: [],
-        };
-
-        let currentSection = 'personalInfo';
-
-        const sectionKeywords: { [key: string]: string[] } = {
-            summary: ['professional summary', 'summary', 'profile', 'objective', 'about', 'overview', 'executive summary'],
-            experience: ['work experience', 'experience', 'employment', 'history', 'career', 'professional experience', 'work history'],
-            education: ['education', 'academic', 'degree', 'university', 'college', 'qualification', 'certifications'],
-            skills: ['skills', 'abilities', 'competencies', 'technical skills', 'expertise', 'core competencies'],
-            languages: ['languages', 'language proficiency', 'language skills', 'linguistic'],
-        };
-
-        for (const line of lines) {
-            let isSectionHeader = false;
-            const lowerLine = line.toLowerCase();
-            for (const section in sectionKeywords) {
-                if (sectionKeywords[section].some((keyword) => lowerLine.includes(keyword) && (line === line.toUpperCase() || line.split(' ').length <= 5))) {
-                    currentSection = section;
-                    isSectionHeader = true;
-                    break;
-                }
-            }
-            if (!isSectionHeader && line.length > 0) {
-                sections[currentSection].push(line);
-            }
-        }
-
-        // Personal Info Parsing
-        const fullText = lines.join(' ');
-        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-        const phoneRegex = /\+?[0-9\s\-()]{7,}|[0-9]{3}[\s\-]?[0-9]{3}[\s\-]?[0-9]{4}/;
-        const linkedinRegex = /linkedin\.com\/in\/[a-zA-Z0-9\-]+/i;
-        const githubRegex = /github\.com\/[a-zA-Z0-9\-]+/i;
-
-        const emailMatch = fullText.match(emailRegex);
-        const phoneMatch = fullText.match(phoneRegex);
-        const linkedinMatch = fullText.match(linkedinRegex);
-        const githubMatch = fullText.match(githubRegex);
-
-        let name = sections.personalInfo[0] || lines[0] || 'Your Name';
-        let title = sections.personalInfo[1] || 'Your Title';
-        let location = 'Your Location';
-
-        // Simplified return for demonstration:
-        return {
-            personalInfo: {
-                name: name || 'Your Name',
-                email: emailMatch ? emailMatch[0] : '',
-                phone: phoneMatch ? phoneMatch[0] : '',
-                location: location || 'Your Location',
-                title: title || 'Your Title',
-                summary: sections.summary.join('\n') || '',
-                linkedin: linkedinMatch ? `https://${linkedinMatch[0]}` : '',
-                github: githubMatch ? `https://${githubMatch[0]}` : '',
-            },
-            experiences: [], // Placeholder for full parsed experiences
-            education: [], // Placeholder for full parsed education
-            skills: sections.skills.join(', ').split(/[,|•\n]/).map((s) => s.trim()).filter((s) => s.length > 1 && s.length < 100),
-            languages: sections.languages.map((line) => line.trim()).filter((line) => line.length > 1),
-        };
-    } catch (error) {
-        console.error('Error parsing CV text:', error);
-        throw error;
-    }
-}
-
